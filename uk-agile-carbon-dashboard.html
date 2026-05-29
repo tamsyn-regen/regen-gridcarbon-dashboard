@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UK Grid — Agile Price × Carbon Intensity</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2eb;
+    --ink: #1a1a14;
+    --paper: #fdfaf4;
+    --border: #d4cebb;
+    --muted: #8a8474;
+    --price-color: #c8460a;
+    --carbon-color: #2e6b4f;
+    --accent: #c8460a;
+    --negative: #2e6b4f;
+    --peak: #c8460a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* Halftone texture overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px);
+    background-size: 6px 6px;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 28px 64px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 0 16px;
+    margin-bottom: 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 16px;
+  }
+
+  .masthead {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+
+  .masthead em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--price-color);
+  }
+
+  .header-meta {
+    text-align: right;
+  }
+
+  .live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--price-color);
+    border: 1px solid var(--price-color);
+    padding: 4px 10px;
+    margin-bottom: 6px;
+  }
+
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--price-color);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  .header-date {
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── REGION SELECTOR ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+
+  .control-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  select {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    padding: 8px 14px;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%231a1a14'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    min-width: 220px;
+  }
+
+  select:focus { border-color: var(--ink); }
+
+  .refresh-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--ink);
+    color: var(--bg);
+    border: none;
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .refresh-btn:hover { background: var(--price-color); }
+  .refresh-btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* ── STAT STRIP ── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0;
+    border: 1px solid var(--border);
+    margin-bottom: 28px;
+    background: var(--border);
+  }
+
+  .stat-cell {
+    background: var(--paper);
+    padding: 16px 20px;
+    position: relative;
+  }
+
+  .stat-cell .s-label {
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-cell .s-value {
+    font-family: 'Fraunces', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .stat-cell .s-unit {
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 3px;
+    letter-spacing: 0.06em;
+  }
+
+  /* ── CHART CONTAINER ── */
+  .chart-wrap {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    padding: 24px 16px 12px;
+    margin-bottom: 20px;
+    position: relative;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding: 0 8px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .chart-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .legend-line {
+    width: 24px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  canvas {
+    width: 100% !important;
+  }
+
+  /* ── CORRELATION PANEL ── */
+  .insight-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .insight-grid { grid-template-columns: 1fr; }
+    header { grid-template-columns: 1fr; }
+    .header-meta { text-align: left; }
+  }
+
+  .insight-panel {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+  }
+
+  .insight-panel .ip-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .price-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 0.72rem;
+  }
+
+  .price-row:last-child { border-bottom: none; }
+
+  .price-row .time { color: var(--muted); }
+
+  .price-badge {
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 1px 8px;
+  }
+
+  .price-badge.neg { background: rgba(46,107,79,0.12); color: var(--carbon-color); }
+  .price-badge.low { background: rgba(46,107,79,0.07); color: var(--carbon-color); }
+  .price-badge.mid { background: rgba(200,70,10,0.07); color: var(--price-color); }
+  .price-badge.high { background: rgba(200,70,10,0.15); color: var(--price-color); }
+
+  /* ── SCATTER PANEL ── */
+  .scatter-wrap {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    padding: 24px 16px 12px;
+    margin-bottom: 20px;
+  }
+
+  .scatter-stats {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 10px 8px 14px;
+    flex-wrap: wrap;
+  }
+
+  .scatter-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .scatter-stat .ss-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .scatter-stat .ss-value {
+    font-family: 'Fraunces', serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .corr-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border: 1.5px solid currentColor;
+    align-self: flex-end;
+    margin-bottom: 2px;
+  }
+
+  .corr-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ── API FOOTER ── */
+  .api-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .api-source {
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .api-source .src-label {
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .api-source .src-url {
+    font-size: 0.68rem;
+    color: var(--ink);
+    word-break: break-all;
+  }
+
+  .api-source .src-url span { color: var(--price-color); }
+
+  /* Loading / error */
+  .loader-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(245,242,235,0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    gap: 12px;
+    z-index: 10;
+  }
+
+  .spin {
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--border);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.8;
+  }
+
+  .zero-line {
+    font-size: 0.6rem;
+    color: var(--carbon-color);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="masthead">UK Grid<br><em>Price × Carbon</em></div>
+    </div>
+    <div class="header-meta">
+      <div class="live-indicator"><div class="live-dot"></div>Live</div>
+      <div class="header-date" id="header-date">—</div>
+    </div>
+  </header>
+
+  <div class="controls">
+    <span class="control-label">DNO Region</span>
+    <select id="region-select" onchange="loadData()">
+      <option value="A">Eastern England</option>
+      <option value="B">East Midlands</option>
+      <option value="C" selected>London</option>
+      <option value="D">Merseyside & Northern Wales</option>
+      <option value="E">North Eastern England</option>
+      <option value="F">North Western England</option>
+      <option value="G">Northern Scotland</option>
+      <option value="H">Southern England</option>
+      <option value="J">South Eastern England</option>
+      <option value="K">Southern Wales</option>
+      <option value="L">South Western England</option>
+      <option value="M">Southern Scotland</option>
+      <option value="N">West Midlands</option>
+      <option value="P">Yorkshire</option>
+    </select>
+    <button class="refresh-btn" id="refresh-btn" onclick="loadData()">↻ Refresh</button>
+  </div>
+
+  <div class="stat-strip" id="stat-strip">
+    <div class="stat-cell">
+      <div class="s-label">Current Agile Price</div>
+      <div class="s-value" id="stat-current-price" style="color:var(--price-color)">—</div>
+      <div class="s-unit">p / kWh inc. VAT</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-label">Today's Average</div>
+      <div class="s-value" id="stat-avg-price">—</div>
+      <div class="s-unit">p / kWh</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-label">Today's Min Price</div>
+      <div class="s-value" id="stat-min-price" style="color:var(--carbon-color)">—</div>
+      <div class="s-unit">p / kWh</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-label">Carbon Intensity</div>
+      <div class="s-value" id="stat-carbon" style="color:var(--carbon-color)">—</div>
+      <div class="s-unit">g CO₂eq / kWh</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-label">Carbon Index</div>
+      <div class="s-value" id="stat-carbon-index" style="font-size:1rem;padding-top:8px">—</div>
+      <div class="s-unit">forecast band</div>
+    </div>
+    <div class="stat-cell">
+      <div class="s-label">Negative Slots Today</div>
+      <div class="s-value" id="stat-neg-slots" style="color:var(--carbon-color)">—</div>
+      <div class="s-unit">half-hour periods</div>
+    </div>
+  </div>
+
+  <!-- Main dual-axis chart -->
+  <div class="chart-wrap" id="main-chart-wrap">
+    <div class="loader-overlay" id="main-loader">
+      <div class="spin"></div>
+      Fetching live data…
+    </div>
+    <div class="chart-header">
+      <div class="chart-title">Half-hourly Agile Price & Carbon Intensity — Today</div>
+      <div class="chart-legend">
+        <div class="legend-item">
+          <div class="legend-line" style="background:var(--price-color)"></div>
+          Agile p/kWh
+        </div>
+        <div class="legend-item">
+          <div class="legend-line" style="background:var(--carbon-color);"></div>
+          Carbon g/kWh
+        </div>
+      </div>
+    </div>
+    <canvas id="main-chart" height="320"></canvas>
+  </div>
+
+  <div class="insight-grid">
+    <!-- Cheapest slots table -->
+    <div class="insight-panel">
+      <div class="ip-title">Cheapest slots today</div>
+      <div id="cheapest-slots">—</div>
+    </div>
+    <!-- Most expensive slots -->
+    <div class="insight-panel">
+      <div class="ip-title">Priciest slots today</div>
+      <div id="priciest-slots">—</div>
+    </div>
+  </div>
+
+  <!-- Scatter: Price vs Carbon -->
+  <div class="scatter-wrap" id="scatter-wrap">
+    <div class="chart-header">
+      <div class="chart-title">Price vs. Carbon Intensity — correlation scatter</div>
+      <div style="font-size:0.65rem;color:var(--muted);letter-spacing:0.05em">Each dot = one 30-min slot</div>
+    </div>
+    <div class="scatter-stats" id="scatter-stats"></div>
+    <canvas id="scatter-chart" height="260"></canvas>
+  </div>
+
+  <div class="api-footer">
+    <div class="api-source">
+      <div class="src-label">Agile price data</div>
+      <div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/<br>electricity-tariffs/E-1R-AGILE-24-10-01-{region}/standard-unit-rates/</div>
+    </div>
+    <div class="api-source">
+      <div class="src-label">Carbon intensity data</div>
+      <div class="src-url"><span>GET</span> api.carbonintensity.org.uk/intensity/date/{date}</div>
+    </div>
+    <div class="api-source">
+      <div class="src-label">Note</div>
+      <div class="src-url" style="color:var(--muted)">Octopus Agile API is public, no auth required. Carbon Intensity API is free, no auth. Both update half-hourly.</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+let mainChart = null;
+let scatterChart = null;
+
+// Region → DNO short name for carbon API matching
+const REGION_LABELS = {
+  A:'Eastern England', B:'East Midlands', C:'London', D:'Merseyside & N Wales',
+  E:'North Eastern', F:'North Western', G:'Northern Scotland', H:'Southern England',
+  J:'South Eastern', K:'Southern Wales', L:'South Western', M:'Southern Scotland',
+  N:'West Midlands', P:'Yorkshire'
+};
+
+function setLoader(show) {
+  document.getElementById('main-loader').style.display = show ? 'flex' : 'none';
+  document.getElementById('refresh-btn').disabled = show;
+}
+
+function nowUK() {
+  return new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' });
+}
+
+function todayDateStr() {
+  const d = new Date();
+  // Get today in UK time
+  const ukStr = d.toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); // YYYY-MM-DD
+  return ukStr;
+}
+
+function formatTime(isoStr) {
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' });
+}
+
+function priceBadgeClass(p) {
+  if (p < 0) return 'neg';
+  if (p < 10) return 'low';
+  if (p < 25) return 'mid';
+  return 'high';
+}
+
+async function fetchAgile(region) {
+  const today = todayDateStr();
+  const from = `${today}T00:00Z`;
+  // Get tomorrow start to capture full day
+  const tomorrowDate = new Date(today);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const to = tomorrowDate.toISOString().split('T')[0] + 'T00:00Z';
+
+  const tariffCode = `E-1R-AGILE-24-10-01-${region}`;
+  const url = `https://api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/${tariffCode}/standard-unit-rates/?period_from=${from}&period_to=${to}&page_size=100`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Agile API ${r.status}`);
+  const j = await r.json();
+  // Sort ascending
+  return (j.results || []).sort((a, b) => new Date(a.valid_from) - new Date(b.valid_from));
+}
+
+async function fetchCarbon() {
+  const today = todayDateStr();
+  const url = `https://api.carbonintensity.org.uk/intensity/date/${today}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Carbon API ${r.status}`);
+  const j = await r.json();
+  return (j.data || []).sort((a, b) => new Date(a.from) - new Date(b.from));
+}
+
+async function fetchCurrentIntensity() {
+  const r = await fetch('https://api.carbonintensity.org.uk/intensity');
+  const j = await r.json();
+  return j.data?.[0]?.intensity || {};
+}
+
+function buildMainChart(agile, carbon) {
+  // Align by 30-min slots using valid_from / from timestamps
+  const agileMap = {};
+  agile.forEach(d => {
+    const t = new Date(d.valid_from);
+    // Round to nearest 30min
+    t.setSeconds(0, 0);
+    const mins = t.getMinutes();
+    t.setMinutes(mins < 30 ? 0 : 30);
+    agileMap[t.toISOString()] = d.value_inc_vat;
+  });
+
+  const carbonMap = {};
+  carbon.forEach(d => {
+    const t = new Date(d.from);
+    t.setSeconds(0, 0);
+    const mins = t.getMinutes();
+    t.setMinutes(mins < 30 ? 0 : 30);
+    carbonMap[t.toISOString()] = d.intensity?.actual ?? d.intensity?.forecast ?? null;
+  });
+
+  // Build unified timeline - use agile slots as base (48 per day)
+  const labels = [];
+  const priceData = [];
+  const carbonData = [];
+
+  agile.forEach(d => {
+    const label = formatTime(d.valid_from);
+    labels.push(label);
+    priceData.push(parseFloat(d.value_inc_vat.toFixed(2)));
+
+    const t = new Date(d.valid_from);
+    t.setSeconds(0, 0);
+    const mins = t.getMinutes();
+    t.setMinutes(mins < 30 ? 0 : 30);
+    carbonData.push(carbonMap[t.toISOString()] ?? null);
+  });
+
+  const ctx = document.getElementById('main-chart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+
+  // Price colour gradient: green for negative/cheap, orange for expensive
+  const priceColors = priceData.map(p => {
+    if (p < 0) return 'rgba(46,107,79,0.85)';
+    if (p < 10) return 'rgba(46,107,79,0.6)';
+    if (p < 20) return 'rgba(200,150,50,0.7)';
+    if (p < 30) return 'rgba(200,100,20,0.75)';
+    return 'rgba(200,70,10,0.85)';
+  });
+
+  mainChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Agile Price (p/kWh)',
+          data: priceData,
+          backgroundColor: priceColors,
+          borderColor: priceColors,
+          borderWidth: 0,
+          yAxisID: 'yPrice',
+          order: 2,
+          barPercentage: 0.85,
+          categoryPercentage: 0.9,
+        },
+        {
+          label: 'Carbon Intensity (g CO₂/kWh)',
+          data: carbonData,
+          type: 'line',
+          borderColor: 'rgba(46,107,79,0.9)',
+          backgroundColor: 'rgba(46,107,79,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.4,
+          fill: true,
+          yAxisID: 'yCarbon',
+          order: 1,
+          spanGaps: true,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a14',
+          titleColor: '#8a8474',
+          bodyColor: '#f5f2eb',
+          titleFont: { family: 'IBM Plex Mono', size: 10 },
+          bodyFont: { family: 'IBM Plex Mono', size: 11 },
+          padding: 10,
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.label.includes('Agile')) return ` Price: ${ctx.parsed.y?.toFixed(2)} p/kWh`;
+              if (ctx.dataset.label.includes('Carbon') && ctx.parsed.y != null) return ` Carbon: ${ctx.parsed.y} g CO₂/kWh`;
+              return null;
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            zeroLine: {
+              type: 'line',
+              yMin: 0,
+              yMax: 0,
+              yScaleID: 'yPrice',
+              borderColor: 'rgba(46,107,79,0.5)',
+              borderWidth: 1,
+              borderDash: [4, 3],
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#8a8474',
+            maxTicksLimit: 12,
+            maxRotation: 0,
+          },
+          grid: { display: false },
+          border: { color: '#d4cebb' }
+        },
+        yPrice: {
+          position: 'left',
+          title: {
+            display: true,
+            text: 'p / kWh',
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#c8460a'
+          },
+          ticks: {
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#c8460a',
+            callback: v => v.toFixed(0) + 'p'
+          },
+          grid: { color: 'rgba(212,206,187,0.5)' },
+          border: { color: '#d4cebb' }
+        },
+        yCarbon: {
+          position: 'right',
+          title: {
+            display: true,
+            text: 'g CO₂/kWh',
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#2e6b4f'
+          },
+          ticks: {
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#2e6b4f',
+          },
+          grid: { display: false },
+          border: { color: '#d4cebb' }
+        }
+      }
+    }
+  });
+}
+
+function pearsonR(points) {
+  const n = points.length;
+  if (n < 2) return null;
+  const mx = points.reduce((a, p) => a + p.x, 0) / n;
+  const my = points.reduce((a, p) => a + p.y, 0) / n;
+  const num = points.reduce((a, p) => a + (p.x - mx) * (p.y - my), 0);
+  const den = Math.sqrt(
+    points.reduce((a, p) => a + (p.x - mx) ** 2, 0) *
+    points.reduce((a, p) => a + (p.y - my) ** 2, 0)
+  );
+  return den === 0 ? 0 : num / den;
+}
+
+function linReg(points) {
+  const n = points.length;
+  const sumX = points.reduce((a, p) => a + p.x, 0);
+  const sumY = points.reduce((a, p) => a + p.y, 0);
+  const sumXY = points.reduce((a, p) => a + p.x * p.y, 0);
+  const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0);
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX ** 2);
+  const intercept = (sumY - slope * sumX) / n;
+  return { slope, intercept };
+}
+
+function corrLabel(r) {
+  const abs = Math.abs(r);
+  const dir = r >= 0 ? 'positive' : 'negative';
+  if (abs < 0.3) return { text: 'Not correlated', color: 'var(--muted)', dir };
+  if (abs < 0.7) return { text: 'Somewhat correlated', color: '#b07a10', dir };
+  return { text: 'Highly correlated', color: 'var(--price-color)', dir };
+}
+
+function buildScatter(agile, carbon) {
+  // Match agile slots with carbon data
+  const carbonMap = {};
+  carbon.forEach(d => {
+    const t = new Date(d.from);
+    t.setSeconds(0, 0);
+    const mins = t.getMinutes();
+    t.setMinutes(mins < 30 ? 0 : 30);
+    carbonMap[t.toISOString()] = d.intensity?.actual ?? d.intensity?.forecast ?? null;
+  });
+
+  const points = [];
+  agile.forEach(d => {
+    const t = new Date(d.valid_from);
+    t.setSeconds(0, 0);
+    const mins = t.getMinutes();
+    t.setMinutes(mins < 30 ? 0 : 30);
+    const c = carbonMap[t.toISOString()];
+    if (c != null) {
+      points.push({ x: c, y: parseFloat(d.value_inc_vat.toFixed(2)) });
+    }
+  });
+
+  // Stats
+  const r = pearsonR(points);
+  const r2 = r !== null ? r * r : null;
+  const { slope, intercept } = linReg(points);
+  const xVals = points.map(p => p.x);
+  const xMin = Math.min(...xVals), xMax = Math.max(...xVals);
+  const trendLine = [
+    { x: xMin, y: slope * xMin + intercept },
+    { x: xMax, y: slope * xMax + intercept }
+  ];
+
+  const lbl = r !== null ? corrLabel(r) : null;
+  const statsEl = document.getElementById('scatter-stats');
+  if (r !== null) {
+    statsEl.innerHTML = `
+      <div class="scatter-stat">
+        <div class="ss-label">Pearson r</div>
+        <div class="ss-value" style="color:${lbl.color}">${r.toFixed(3)}</div>
+      </div>
+      <div class="scatter-stat">
+        <div class="ss-label">r²</div>
+        <div class="ss-value" style="color:${lbl.color}">${r2.toFixed(3)}</div>
+      </div>
+      <div class="scatter-stat">
+        <div class="ss-label">n slots</div>
+        <div class="ss-value" style="color:var(--muted)">${points.length}</div>
+      </div>
+      <div class="corr-badge" style="color:${lbl.color}">
+        <div class="corr-dot"></div>${lbl.text}
+      </div>`;
+  } else {
+    statsEl.innerHTML = '';
+  }
+
+  const ctx = document.getElementById('scatter-chart').getContext('2d');
+  if (scatterChart) scatterChart.destroy();
+
+  scatterChart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Price vs Carbon',
+          data: points,
+          backgroundColor: points.map(p => p.y < 0 ? 'rgba(46,107,79,0.7)' : p.y < 15 ? 'rgba(46,107,79,0.45)' : 'rgba(200,70,10,0.5)'),
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        {
+          label: 'Trend line',
+          data: trendLine,
+          type: 'line',
+          borderColor: lbl ? lbl.color : 'var(--muted)',
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a1a14',
+          titleColor: '#8a8474',
+          bodyColor: '#f5f2eb',
+          titleFont: { family: 'IBM Plex Mono', size: 10 },
+          bodyFont: { family: 'IBM Plex Mono', size: 11 },
+          callbacks: {
+            label: ctx => ctx.dataset.label === 'Trend line' ? null : ` ${ctx.parsed.x} g CO₂/kWh  →  ${ctx.parsed.y.toFixed(1)}p/kWh`
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Carbon Intensity (g CO₂/kWh)',
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#2e6b4f'
+          },
+          ticks: { font: { family: 'IBM Plex Mono', size: 9 }, color: '#8a8474' },
+          grid: { color: 'rgba(212,206,187,0.4)' },
+          border: { color: '#d4cebb' }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Agile Price (p/kWh)',
+            font: { family: 'IBM Plex Mono', size: 9 },
+            color: '#c8460a'
+          },
+          ticks: { font: { family: 'IBM Plex Mono', size: 9 }, color: '#8a8474', callback: v => v + 'p' },
+          grid: { color: 'rgba(212,206,187,0.4)' },
+          border: { color: '#d4cebb' }
+        }
+      }
+    }
+  });
+}
+
+function buildSlotTables(agile) {
+  const sorted = [...agile].sort((a, b) => a.value_inc_vat - b.value_inc_vat);
+  const cheapest = sorted.slice(0, 5);
+  const priciest = sorted.slice(-5).reverse();
+
+  function rowHTML(d) {
+    const p = d.value_inc_vat;
+    const cls = priceBadgeClass(p);
+    return `<div class="price-row">
+      <span class="time">${formatTime(d.valid_from)} – ${formatTime(d.valid_to)}</span>
+      <span class="price-badge ${cls}">${p.toFixed(1)}p</span>
+    </div>`;
+  }
+
+  document.getElementById('cheapest-slots').innerHTML = cheapest.map(rowHTML).join('');
+  document.getElementById('priciest-slots').innerHTML = priciest.map(rowHTML).join('');
+}
+
+function updateStats(agile, carbonNow) {
+  const now = new Date();
+  // Find current slot
+  const current = agile.find(d => new Date(d.valid_from) <= now && new Date(d.valid_to) > now);
+  const prices = agile.map(d => d.value_inc_vat);
+  const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+  const min = Math.min(...prices);
+  const negSlots = prices.filter(p => p < 0).length;
+
+  document.getElementById('stat-current-price').textContent = current ? current.value_inc_vat.toFixed(1) : '—';
+  document.getElementById('stat-avg-price').textContent = avg.toFixed(1);
+  document.getElementById('stat-min-price').textContent = min.toFixed(1);
+  document.getElementById('stat-carbon').textContent = carbonNow.actual ?? carbonNow.forecast ?? '—';
+  document.getElementById('stat-carbon-index').textContent = (carbonNow.index || '—').toUpperCase();
+  document.getElementById('stat-neg-slots').textContent = negSlots;
+
+  // Colour current price
+  const priceEl = document.getElementById('stat-current-price');
+  if (current) {
+    priceEl.style.color = current.value_inc_vat < 0 ? 'var(--carbon-color)' :
+                          current.value_inc_vat < 15 ? '#5a8a6f' : 'var(--price-color)';
+  }
+}
+
+async function loadData() {
+  setLoader(true);
+  const region = document.getElementById('region-select').value;
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('en-GB', {
+    weekday:'long', day:'numeric', month:'long', year:'numeric', timeZone:'Europe/London'
+  });
+
+  try {
+    const [agile, carbon, carbonNow] = await Promise.all([
+      fetchAgile(region),
+      fetchCarbon(),
+      fetchCurrentIntensity()
+    ]);
+
+    if (!agile.length) {
+      document.getElementById('main-chart').parentElement.querySelector('.loader-overlay') &&
+      (document.getElementById('main-loader').innerHTML = '<div class="error-msg">No Agile price data returned for this region today.<br>Octopus publishes tomorrow\'s prices after ~4pm.</div>');
+      setLoader(false);
+      return;
+    }
+
+    updateStats(agile, carbonNow);
+    buildMainChart(agile, carbon);
+    buildSlotTables(agile);
+    buildScatter(agile, carbon);
+
+  } catch (err) {
+    document.getElementById('main-loader').innerHTML =
+      `<div class="error-msg">⚠ Could not load data<br><small>${err.message}</small><br><br>Check browser console. CORS may block direct fetches in some environments.</div>`;
+    console.error(err);
+    return;
+  }
+
+  setLoader(false);
+}
+
+// Init
+loadData();
+// Auto-refresh every 30 min
+setInterval(loadData, 30 * 60 * 1000);
+</script>
+</body>
+</html>
