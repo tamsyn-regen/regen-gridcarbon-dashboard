@@ -22,6 +22,11 @@
   .live-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:blink 1.4s ease-in-out infinite;}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
   .header-date{font-size:.68rem;color:rgba(255,255,255,.5);letter-spacing:.04em;}
+  .regen-logo{display:block;margin-top:10px;width:90px;opacity:.95;}
+  .intro-block{background:var(--ink);color:#fff;margin-left:-28px;margin-right:-28px;padding:28px 28px 32px;margin-bottom:32px;border-bottom:1px solid rgba(255,255,255,.1);}
+  .intro-block h2{font-family:'Fraunces',serif;font-size:clamp(1.3rem,3vw,2rem);font-weight:700;line-height:1.2;letter-spacing:-.02em;color:#fff;margin-bottom:12px;}
+  .intro-block h2 em{font-style:italic;font-weight:300;color:var(--lime);}
+  .intro-block p{font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.7;max-width:700px;}
   .controls{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap;}
   .control-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);white-space:nowrap;}
   .control-divider{width:1px;height:28px;background:var(--border);margin:0 4px;}
@@ -116,8 +121,14 @@
   <div class="header-meta">
     <div class="live-indicator"><div class="live-dot"></div>Live</div>
     <div class="header-date" id="header-date">—</div>
+    <svg class="regen-logo" viewBox="0 0 1000 195.13" xmlns="http://www.w3.org/2000/svg"><path fill="#fcfaf1" d="M965.42,193.82c-13.6,0-25.96-8-31.47-21.04l-58.72-139.15c-.32-.75-1.23-3.24-3.86-2.64-2.68.54-2.54,3.13-2.54,3.94v153.49h-31.04V34.93c0-16.55,11.33-30.41,27.55-33.69,16.23-3.24,32.05,5.07,38.5,20.32l58.72,139.15c.31.75,1.19,3.57,3.93,3.01,2.67-.54,2.48-3.48,2.48-4.3V6.63h31.04v152.79c0,16.55-11.33,30.41-27.55,33.69-2.36.47-4.71.71-7.02.71Z"/><path fill="#fcfaf1" d="M192.83,157.38h-51.59c-9.4,0-17.33-5.12-21.2-13.69-3.87-8.57-2.46-17.9,3.76-24.95l19.32-21.89c14.31-16.22,17.67-38.54,8.78-58.26-8.9-19.72-27.86-31.96-49.49-31.96H0v181.79h31.04V37.67h71.36c9.4,0,17.33,5.12,21.19,13.69,3.87,8.57,2.46,17.91-3.76,24.96l-19.32,21.89c-14.31,16.22-17.67,38.54-8.78,58.26,8.9,19.72,27.87,31.96,49.5,31.96h33.67l17.92-31.04Z"/><path fill="#fcfaf1" d="M490.12,113.04h73.81c-7.01,29.24-33.38,51.05-64.73,51.05-20.15,0-39-8.99-51.71-24.65-12.9-15.9-17.63-35.98-13.31-56.54,5.2-24.72,25.25-44.93,49.9-50.28,4.98-1.08,9.96-1.61,14.87-1.61,11.92,0,23.38,3.18,33.39,8.99l15.43-26.73c-20.67-12.01-45.47-16.38-70.29-10.99-36.4,7.91-66.01,37.73-73.69,74.22-6.19,29.46.94,59.53,19.58,82.49,18.64,22.97,46.27,36.13,75.82,36.13,53.81,0,97.6-43.78,97.6-97.6v-4.76c0-.28,0-.65,0-1.11v-9.64l-88.76-.02-17.92,31.04Z"/><polygon fill="#fcfaf1" points="260.93 113.04 330.24 113.04 330.24 82.01 260.93 82.01 260.93 37.67 349.56 37.67 349.56 6.63 229.89 6.63 229.89 188.42 349.56 188.42 349.56 157.38 260.93 157.38 260.93 113.04"/><polygon fill="#fcfaf1" points="688 113.04 757.3 113.04 757.3 82.01 688 82.01 688 37.67 776.63 37.67 776.63 6.63 656.96 6.63 656.96 188.42 776.63 188.42 776.63 157.38 688 157.38 688 113.04"/></svg>
   </div>
 </header>
+
+<div class="intro-block">
+  <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
+  <p>Regen have developed this dashboard to answer this question and track the correlation between grid carbon intensity and electricity prices over time.</p>
+</div>
 
 <div class="controls">
   <span class="control-label">Region</span>
@@ -143,7 +154,7 @@
   <select id="period-select" onchange="loadData()">
     <option value="today">Today</option>
     <option value="month">Last 30 days</option>
-    <option value="year">Last 12 months</option>
+    <option value="year" selected>Last 12 months</option>
   </select>
   <button class="refresh-btn" id="refresh-btn" onclick="loadData()">↻ Refresh</button>
 </div>
@@ -173,7 +184,7 @@
       <div class="chart-title">Price vs. Carbon Intensity — scatter</div>
       <div class="chart-subtitle" id="scatter-subtitle">Each dot = one 30-min slot</div>
     </div>
-    <div style="font-size:.65rem;color:var(--muted);letter-spacing:.05em;align-self:center">↙ cheap &amp; clean &nbsp;|&nbsp; expensive &amp; dirty ↗</div>
+    <div style="font-size:1rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; expensive &amp; dirty ↗</div>
   </div>
   <canvas id="scatter-chart" height="280"></canvas>
 </div>
