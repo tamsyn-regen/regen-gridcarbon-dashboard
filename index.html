@@ -126,8 +126,8 @@
 </header>
 
 <div class="intro-block">
-  <h2>Are electricity prices really cheaper when the carbon intensity of the grid is lowest?</h2>
-  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Explore the data, flip between regeions and timeframes, and draw your own conclusions!</p>
+  <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
+  <p>Regen have developed this dashboard to answer this question and track the correlation between grid carbon intensity and electricity prices over time.</p>
 </div>
 
 <div class="controls">
@@ -185,6 +185,11 @@
       <div class="chart-subtitle" id="scatter-subtitle">Each dot = one 30-min slot</div>
     </div>
     <div style="font-size:1rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; expensive &amp; dirty ↗</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:.62rem;color:var(--muted);letter-spacing:.05em;">
+        <span>dot colour: cheap</span>
+        <div style="width:80px;height:8px;border-radius:4px;background:linear-gradient(to right,#FFE8DC,#FB5400)"></div>
+        <span>expensive</span>
+      </div>
   </div>
   <canvas id="scatter-chart" height="280"></canvas>
 </div>
@@ -477,10 +482,20 @@ function buildScatter(agile,carbon){
     trendDs.push({label:'OLS trendline',data:[{x:minX,y:stats.slope*minX+stats.intercept},{x:maxX,y:stats.slope*maxX+stats.intercept}],type:'line',borderColor:'rgba(13,43,53,.7)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,tension:0});
   }
   const sample=pts.length>1200?pts.filter((_,i)=>i%Math.ceil(pts.length/1200)===0):pts;
+  // Price gradient: #FFE8DC (cheap/negative) → #FB5400 (expensive)
+  const allPrices=sample.map(p=>p.y);
+  const minP=Math.min(...allPrices),maxP=Math.max(...allPrices);
+  function priceToColor(price){
+    const t=Math.max(0,Math.min(1,(price-minP)/(maxP-minP||1)));
+    const r=Math.round(255+(251-255)*t);
+    const g=Math.round(232+(84-232)*t);
+    const b=Math.round(220+(0-220)*t);
+    return`rgba(${r},${g},${b},0.85)`;
+  }
   const ctx=document.getElementById('scatter-chart').getContext('2d');
   if(scatterChart)scatterChart.destroy();
   scatterChart=new Chart(ctx,{type:'scatter',data:{datasets:[
-    {label:'Price vs Carbon',data:sample,backgroundColor:sample.map(p=>p.y<0?'rgba(42,122,75,.75)':p.y<15?'rgba(184,224,74,.6)':'rgba(13,43,53,.45)'),pointRadius:3,pointHoverRadius:6},
+    {label:'Price vs Carbon',data:sample,backgroundColor:sample.map(p=>priceToColor(p.y)),pointRadius:3,pointHoverRadius:6},
     ...trendDs
   ]},options:{responsive:true,plugins:{legend:{display:true,labels:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',boxWidth:20,padding:16,filter:item=>item.datasetIndex===1}},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#ffffff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x} g CO₂/kWh  →  ${ctx.parsed.y}p/kWh`:` Trendline: ${ctx.parsed.y.toFixed(1)}p/kWh`}}},scales:{x:{title:{display:true,text:'Carbon Intensity (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Agile Price (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}}}}});
 }
