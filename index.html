@@ -161,7 +161,7 @@
   <div class="control-divider"></div>
   <span class="control-label">Period</span>
   <select id="period-select" onchange="loadData()">
-    <option value="today">Today</option>
+    <option value="today">Last 24 hours</option>
     <option value="month">Last 30 days</option>
     <option value="year" selected>Last 12 months</option>
   </select>
@@ -469,6 +469,35 @@ function carbonByDay(carbon){
   carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const day=new Date(d.from).toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!m[day])m[day]=[];m[day].push(v);});
   return Object.fromEntries(Object.entries(m).map(([d,vs])=>[d,vs.reduce((a,b)=>a+b,0)/vs.length]));
 }
+// Hourly aggregation: group by YYYY-MM-DDTHH key (UK time, truncated to hour)
+function aggregateByHour(agile){
+  const byHour={};
+  agile.forEach(d=>{
+    const dt=new Date(d.valid_from);
+    // Truncate to hour in UTC (Agile slots are UTC-aligned)
+    const hourKey=dt.toISOString().slice(0,13); // "2025-01-15T14"
+    if(!byHour[hourKey])byHour[hourKey]=[];
+    byHour[hourKey].push(d.value_inc_vat);
+  });
+  return Object.entries(byHour).sort(([a],[b])=>a.localeCompare(b))
+    .map(([hour,vals])=>({hour,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
+}
+function carbonByHour(carbon){
+  const m={};
+  carbon.forEach(d=>{
+    const v=d.intensity?.actual??d.intensity?.forecast??null;
+    if(v===null)return;
+    const hourKey=new Date(d.from).toISOString().slice(0,13);
+    if(!m[hourKey])m[hourKey]=[];m[hourKey].push(v);
+  });
+  return Object.fromEntries(Object.entries(m).map(([h,vs])=>[h,vs.reduce((a,b)=>a+b,0)/vs.length]));
+}
+function formatHourLabel(hourKey){
+  // hourKey = "2025-01-15T14" — format as "15 Jan 14:00"
+  const d=new Date(hourKey+':00:00Z');
+  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'})+' '+
+         d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});
+}
 function carbonByWeek(carbon){
   const m={};
   carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const dt=new Date(d.from),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!m[k])m[k]=[];m[k].push(v);});
@@ -525,7 +554,9 @@ function buildSlotTables(agile){
 }
 function buildAggSlotTables(agg,label){
   const sorted=[...agg].sort((a,b)=>a.avg-b.avg);
-  const row=d=>`<div class="price-row"><span class="time">${d.date}</span><span class="price-badge ${priceBadgeClass(d.avg)}">${d.avg.toFixed(1)}p avg</span></div>`;
+  const labelKey=label==='hour'?'hour':'date';
+  const formatLabel=label==='hour'?d=>formatHourLabel(d.hour):d=>d.date;
+  const row=d=>`<div class="price-row"><span class="time">${formatLabel(d)}</span><span class="price-badge ${priceBadgeClass(d.avg)}">${d.avg.toFixed(1)}p avg</span></div>`;
   document.getElementById('cheap-title').textContent=`Cheapest ${label}s`;
   document.getElementById('pricey-title').textContent=`Priciest ${label}s`;
   document.getElementById('cheapest-slots').innerHTML=sorted.slice(0,5).map(row).join('');
@@ -582,53 +613,79 @@ async function loadData(){
   setProgress(100);setLoader(false);
 }
 
-// ── TODAY ─────────────────────────────────────────────────────────────────────
+// ── LAST 24 HOURS ─────────────────────────────────────────────────────────────
 async function loadToday(region,isNat){
-  const today=todayUK(),tomorrow=dateNDaysAgo(-1);
-  const fromISO=`${today}T00:00Z`,toISO=`${tomorrow}T00:00Z`;
+  // Rolling 24h window: from 24h ago to now
+  const now=new Date();
+  const from24=new Date(now.getTime()-24*60*60*1000);
+  const fromISO=from24.toISOString().replace(/\.\d{3}Z$/,'Z');
+  const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
   let agile;
   if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*50),`Fetching regions… ${_d}/${t}`));}
   else agile=await fetchAgileRange(region,fromISO,toISO);
-  const[carbon,carbonNow]=await Promise.all([fetchCarbonDate(today),fetchCurrentIntensity()]);
-  if(!agile.length)throw new Error("No Agile data today — Octopus publishes next-day prices after ~4pm.");
+  // Carbon: fetch yesterday + today to cover the 24h window
+  const todayStr=todayUK(),yesterdayStr=dateNDaysAgo(1);
+  const [carbonToday,carbonYesterday,carbonNow]=await Promise.all([
+    fetchCarbonDate(todayStr),
+    fetchCarbonDate(yesterdayStr),
+    fetchCurrentIntensity()
+  ]);
+  const carbon=[...carbonYesterday,...carbonToday];
+  if(!agile.length)throw new Error("No Agile data for the last 24 hours — Octopus publishes next-day prices after ~4pm.");
+  // Filter agile to strictly last 24h
+  const agile24=agile.filter(d=>new Date(d.valid_from)>=from24);
   const cm={};carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
   const labels=[],pd=[],cd=[];
-  agile.forEach(d=>{labels.push(formatTime(d.valid_from));pd.push(parseFloat(d.value_inc_vat.toFixed(2)));const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cd.push(cm[t.toISOString()]??null);});
+  agile24.forEach(d=>{
+    labels.push(formatTime(d.valid_from));
+    pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
+    const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
+    cd.push(cm[t.toISOString()]??null);
+  });
   document.getElementById('chart-main-title').textContent='Half-hourly Agile Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Today — 30-min slots${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot today${isNat?' (national avg)':''}`;
-  document.getElementById('cheap-title').textContent='Cheapest slots today';
-  document.getElementById('pricey-title').textContent='Priciest slots today';
-  setStatLabels(true);fillStats(agile,carbonNow);
-  buildScatter(agile,carbon);
+  document.getElementById('chart-main-subtitle').textContent=`Last 24 hours — 30-min slots${isNat?' (national avg)':''}`;
+  document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot (last 24 hours${isNat?', national avg':''})`;
+  document.getElementById('cheap-title').textContent='Cheapest slots — last 24h';
+  document.getElementById('pricey-title').textContent='Priciest slots — last 24h';
+  setStatLabels(true);fillStats(agile24.length?agile24:agile,carbonNow);
+  buildScatter(agile24.length?agile24:agile,carbon);
   buildMainChart(labels,pd,cd,false);
-  buildSlotTables(agile);
-  // Regional table — runs async in background, uses today's carbon
-  buildRegionalTable(fromISO,toISO,carbon,'today').catch(()=>{});
+  buildSlotTables(agile24.length?agile24:agile);
+  buildRegionalTable(fromISO,toISO,carbon,'24 hours').catch(()=>{});
 }
 
 // ── LAST 30 DAYS ──────────────────────────────────────────────────────────────
 async function loadMonth(region,isNat){
-  const fromDate=dateNDaysAgo(30),toDate=dateNDaysAgo(-1);
-  const fromISO=`${fromDate}T00:00Z`,toISO=`${toDate}T00:00Z`;
+  const now=new Date();
+  const from30=new Date(now.getTime()-30*24*60*60*1000);
+  const fromISO=from30.toISOString().replace(/\.\d{3}Z$/,'Z');
+  const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
   setProgress(10,isNat?'Fetching all 14 regions…':'Fetching 30 days…');
   let agileRaw;
   if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*50),`Fetched ${_d}/${t} regions…`));
   else agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*50),`Agile prices… ${_d}/${t}`));
-  const carbonRaw=await fetchCarbonRange(fromISO,toISO);
-  setProgress(75,'Aggregating…');
-  const aByD=aggregateByDay(agileRaw),cByD=carbonByDay(carbonRaw);
-  const labels=aByD.map(d=>formatDate(d.date+'T12:00:00'));
-  const pd=aByD.map(d=>parseFloat(d.avg.toFixed(2)));
-  const cd=aByD.map(d=>{const v=cByD[d.date];return v!==undefined?parseFloat(v.toFixed(0)):null;});
-  const cAvg=Object.values(cByD).length?Object.values(cByD).reduce((a,b)=>a+b,0)/Object.values(cByD).length:null;
-  document.getElementById('chart-main-title').textContent='Daily Average Agile Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Last 30 days — daily averages${isNat?' (national avg)':''}`;
+  // Carbon: fetch in two chunks to cover 30 days
+  const carbonRaw=[];
+  const midDate=dateNDaysAgo(15);
+  const [c1,c2]=await Promise.all([
+    fetchCarbonRange(fromISO,`${midDate}T00:00Z`),
+    fetchCarbonRange(`${midDate}T00:00Z`,toISO)
+  ]);
+  carbonRaw.push(...c1,...c2);
+  setProgress(75,'Aggregating hourly…');
+  // Aggregate to hourly averages
+  const aByH=aggregateByHour(agileRaw),cByH=carbonByHour(carbonRaw);
+  const labels=aByH.map(d=>formatHourLabel(d.hour));
+  const pd=aByH.map(d=>parseFloat(d.avg.toFixed(2)));
+  const cd=aByH.map(d=>{const v=cByH[d.hour];return v!==undefined?parseFloat(v.toFixed(0)):null;});
+  const cAvg=Object.values(cByH).length?Object.values(cByH).reduce((a,b)=>a+b,0)/Object.values(cByH).length:null;
+  document.getElementById('chart-main-title').textContent='Hourly Average Agile Price & Carbon Intensity';
+  document.getElementById('chart-main-subtitle').textContent=`Last 30 days — hourly averages${isNat?' (national avg)':''}`;
   document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot (last 30 days${isNat?', national avg':''})`;
   setStatLabels(false);fillStats(agileRaw,cAvg);
   buildScatter(agileRaw,carbonRaw);
   buildMainChart(labels,pd,cd,true);
-  buildAggSlotTables(aByD,'day');
+  buildAggSlotTables(aByH,'hour');
   buildRegionalTable(fromISO,toISO,carbonRaw,'30 days').catch(()=>{});
   setProgress(100);
 }
@@ -668,7 +725,7 @@ async function loadYear(region,isNat){
 }
 
 loadData();
-setInterval(()=>{if(document.getElementById('period-select').value==='today')loadData();},30*60*1000);
+setInterval(()=>{const p=document.getElementById('period-select').value;if(p==='today'||p==='month')loadData();},30*60*1000);
 </script>
 </body>
 </html>
