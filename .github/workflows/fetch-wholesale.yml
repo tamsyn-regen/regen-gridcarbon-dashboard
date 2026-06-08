@@ -17,6 +17,7 @@ jobs:
 
       - name: Fetch Elexon wholesale data in 7-day chunks
         run: |
+          curl -v "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=2026-06-01T00:00Z&to=2026-06-07T00:00Z&format=json" 2>&1 | head -80
           python3 - << 'PYEOF2'
           import json, time
           from datetime import datetime, timedelta, timezone
