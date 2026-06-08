@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GB Grid — Agile Price × Carbon Intensity</title>
+<title>GB Grid — Price × Carbon Intensity</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg:#f0f4f2;--ink:#0d2b35;--paper:#ffffff;--border:#c8d8d0;--muted:#5e7a72;
     --price-color:#0d2b35;--carbon-color:#2a7a4b;--lime:#b8e04a;--lime-dark:#8ab52e;
+    --wholesale-color:#7c3aed;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Mono',monospace;min-height:100vh;}
   body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(13,43,53,.05) 1px,transparent 1px);background-size:8px 8px;pointer-events:none;z-index:0;opacity:.6;}
   .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 28px 64px;}
-  header{border-top:4px solid var(--lime);border-bottom:1px solid var(--border);padding:20px 0 16px;margin-bottom:32px;display:grid;grid-template-columns:1fr auto;align-items:start;gap:16px;background:var(--ink);margin-left:-28px;margin-right:-28px;padding-left:28px;padding-right:28px;}
+  header{border-top:4px solid var(--lime);border-bottom:1px solid var(--border);padding:20px 0 16px;margin-bottom:0;display:grid;grid-template-columns:1fr auto;align-items:start;gap:16px;background:var(--ink);margin-left:-28px;margin-right:-28px;padding-left:28px;padding-right:28px;}
   .masthead{font-family:'Fraunces',serif;font-size:clamp(2rem,5vw,3.4rem);font-weight:700;line-height:1;letter-spacing:-.02em;color:#ffffff;}
   .masthead em{font-style:italic;font-weight:300;color:var(--lime);}
   .header-meta{text-align:right;}
@@ -52,8 +53,11 @@
   .section-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:12px;}
   .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
   /* SCATTER */
-  .scatter-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;margin-bottom:0;border-bottom:none;}
-  .corr-panel{border:1px solid var(--border);border-top:3px solid var(--lime);margin-bottom:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;background:var(--border);}
+  .scatter-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0;}
+  @media(max-width:700px){.scatter-grid{grid-template-columns:1fr;}}
+  .scatter-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;border-bottom:none;}
+  .corr-panel{border:1px solid var(--border);border-top:3px solid var(--lime);margin-bottom:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;background:var(--border);}
+  .corr-panel.wholesale-panel{border-top-color:var(--wholesale-color);}
   .corr-cell{background:var(--paper);padding:14px 18px;}
   .corr-cell .c-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;}
   .corr-cell .c-value{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1;}
@@ -63,33 +67,36 @@
   .strength-pill.moderate{background:rgba(184,224,74,.2);color:#5a7820;}
   .strength-pill.weak{background:rgba(13,43,53,.07);color:var(--ink);}
   .strength-pill.none{background:rgba(94,122,114,.12);color:var(--muted);}
-  /* REGIONAL COMPARISON — table full width */
+  /* REGIONAL COMPARISON */
   .regional-wrap{display:block;margin-bottom:28px;}
-  /* REGIONAL TABLE */
   .region-table-panel{background:var(--paper);border:1px solid var(--border);padding:16px;}
-  .region-table-panel .rt-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .region-table-panel .rt-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
   .region-table-panel .rt-title button{font-family:'IBM Plex Mono',monospace;font-size:.6rem;background:none;border:1px solid var(--border);color:var(--muted);padding:2px 8px;cursor:pointer;}
   .region-table-panel .rt-title button:hover{border-color:var(--ink);color:var(--ink);}
   .region-table-loading{padding:40px 20px;text-align:center;font-size:.7rem;color:var(--muted);letter-spacing:.08em;}
   .rt-table{width:100%;border-collapse:collapse;font-size:.72rem;}
-  .rt-table th{font-size:.6rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:2px solid var(--lime);}
+  .rt-table th{font-size:.58rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--lime);}
   .rt-table th.sortable{cursor:pointer;}
   .rt-table th.sortable:hover{color:var(--ink);}
-  .rt-table td{padding:7px 10px;border-bottom:1px dashed var(--border);vertical-align:middle;}
+  .rt-table th.ws-col{border-bottom-color:var(--wholesale-color);color:var(--wholesale-color);}
+  .rt-table td{padding:6px 8px;border-bottom:1px dashed var(--border);vertical-align:middle;}
   .rt-table tr:last-child td{border-bottom:none;}
-  .rt-table tr:hover td{background:rgba(212,206,187,.2);}
-  .r-bar-wrap{width:80px;height:6px;background:rgba(212,206,187,.5);display:inline-block;vertical-align:middle;margin-left:6px;}
-  .r-bar{height:100%;background:var(--carbon-color);}
-  .r-val{font-weight:600;font-family:'Fraunces',serif;font-size:.95rem;}
+  .rt-table tr:hover td{background:rgba(212,206,187,.15);}
+  /* Divider column between Agile and wholesale sections */
+  .rt-table td.col-divider,.rt-table th.col-divider{width:4px;padding:0;background:var(--border);border-bottom:none;}
+  .r-bar-wrap{width:60px;height:5px;background:rgba(212,206,187,.5);display:inline-block;vertical-align:middle;margin-left:5px;}
+  .r-bar{height:100%;}
+  .r-val{font-weight:600;font-family:'Fraunces',serif;font-size:.9rem;}
   .loading-row td{text-align:center;color:var(--muted);font-size:.68rem;letter-spacing:.06em;padding:24px;}
   /* MAIN CHART */
   .chart-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;margin-bottom:20px;position:relative;}
   .chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding:0 8px;flex-wrap:wrap;gap:12px;}
   .chart-title{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;letter-spacing:-.01em;}
   .chart-subtitle{font-size:.62rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:3px;}
-  .chart-legend{display:flex;gap:20px;align-items:center;}
-  .legend-item{display:flex;align-items:center;gap:7px;font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;}
+  .chart-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:7px;font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;}
   .legend-line{width:24px;height:3px;border-radius:2px;}
+  .legend-dash{width:24px;height:3px;background:repeating-linear-gradient(90deg,var(--wholesale-color) 0,var(--wholesale-color) 4px,transparent 4px,transparent 8px);}
   canvas{width:100%!important;}
   /* SLOT TABLES */
   .insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
@@ -106,7 +113,12 @@
   .loader-overlay{position:absolute;inset:0;background:rgba(240,244,242,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);gap:12px;z-index:10;}
   .spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--lime);border-radius:50%;animation:spin .7s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .api-footer{border-top:1px solid var(--border);padding-top:16px;display:flex;gap:32px;flex-wrap:wrap;}
+  .api-footer{border-top:1px solid var(--border);padding-top:16px;display:flex;gap:32px;flex-wrap:wrap;margin-top:28px;}
+  .api-source{flex:1;min-width:200px;}
+  .api-source .src-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;}
+  .api-source .src-url{font-size:.68rem;color:var(--ink);word-break:break-all;}
+  .api-source .src-url span{color:var(--carbon-color);}
+  .api-source .src-url span.ws{color:var(--wholesale-color);}
   /* FOOTER */
   .regen-footer{background:var(--ink);margin-left:-28px;margin-right:-28px;margin-bottom:-64px;padding:40px 28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;margin-top:48px;}
   .footer-photo-wrap{flex-shrink:0;width:80px;height:80px;border-radius:50%;border:3px solid #FBFAF4;overflow:hidden;background:#FBFAF4;}
@@ -115,11 +127,7 @@
   .footer-text p{font-size:.78rem;color:rgba(255,255,255,.75);line-height:1.9;}
   .footer-text a{color:var(--lime);text-decoration:none;}
   .footer-text a:hover{text-decoration:underline;}
-  .api-source{flex:1;min-width:200px;}
-  .api-source .src-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;}
-  .api-source .src-url{font-size:.68rem;color:var(--ink);word-break:break-all;}
-  .api-source .src-url span{color:var(--carbon-color);}
-  @media(max-width:600px){.insight-grid{grid-template-columns:1fr;}header{grid-template-columns:1fr;}.header-meta{text-align:left;}.control-divider{display:none;}}
+  @media(max-width:600px){.insight-grid{grid-template-columns:1fr;}header{grid-template-columns:1fr;}.header-meta{text-align:left;}.control-divider{display:none;}.scatter-grid{grid-template-columns:1fr;}}
 </style>
 </head>
 <body>
@@ -136,7 +144,7 @@
 
 <div class="intro-block">
   <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
-  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. You may select the region of choice and desired time period, or a particular day in the past year. Please be patient as the page loads to fetch the data :)</p>
+  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a region and time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale market index prices (Elexon BMRS) for comparison. Please be patient while data loads.</p>
 </div>
 
 <div class="controls">
@@ -171,7 +179,7 @@
 </div>
 
 <div class="uk-total-note" id="uk-total-note">
-  <strong>UK Total</strong> — Agile prices averaged across all 14 DNO regions. Carbon uses the GB national average. Regional network charges vary; this is an indicative national mean.
+  <strong>GB Total</strong> — Agile prices averaged across all 14 DNO regions. Carbon and wholesale prices use the GB national average. Regional network charges vary; this is an indicative national mean.
 </div>
 <div class="progress-wrap" id="progress-wrap">
   <div class="progress-label" id="progress-label">Fetching data…</div>
@@ -179,60 +187,85 @@
 </div>
 
 <div class="stat-strip">
-  <div class="stat-cell"><div class="s-label" id="sl-current">Current Price</div><div class="s-value" id="stat-current-price" style="color:var(--price-color)">—</div><div class="s-unit">p / kWh inc. VAT</div><div class="s-timestamp" id="stat-current-timestamp"></div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-avg">Period Average</div><div class="s-value" id="stat-avg-price">—</div><div class="s-unit">p / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-min">Period Min</div><div class="s-value" id="stat-min-price" style="color:var(--carbon-color)">—</div><div class="s-unit">p / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-max">Period Max</div><div class="s-value" id="stat-max-price" style="color:var(--price-color)">—</div><div class="s-unit">p / kWh</div></div>
+  <div class="stat-cell"><div class="s-label" id="sl-current">Current Agile Price</div><div class="s-value" id="stat-current-price" style="color:var(--price-color)">—</div><div class="s-unit">p / kWh inc. VAT</div><div class="s-timestamp" id="stat-current-timestamp"></div></div>
+  <div class="stat-cell"><div class="s-label" id="sl-avg">Period Avg (Agile)</div><div class="s-value" id="stat-avg-price">—</div><div class="s-unit">p / kWh</div></div>
+  <div class="stat-cell"><div class="s-label" id="sl-ws">Wholesale Price</div><div class="s-value" id="stat-ws-price" style="color:var(--wholesale-color)">—</div><div class="s-unit">p / kWh (£/MWh ÷ 10)</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-carbon">Carbon Intensity</div><div class="s-value" id="stat-carbon" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-carbon">g CO₂eq / kWh</div></div>
+  <div class="stat-cell"><div class="s-label" id="sl-min">Period Min (Agile)</div><div class="s-value" id="stat-min-price" style="color:var(--carbon-color)">—</div><div class="s-unit">p / kWh</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-neg">Negative Slots</div><div class="s-value" id="stat-neg-slots" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-neg">half-hour periods</div></div>
 </div>
 
-<!-- ① SCATTER FIRST -->
+<!-- ① SCATTER PLOTS SIDE BY SIDE -->
 <div class="section-label">Price–Carbon correlation</div>
-<div class="scatter-wrap">
-  <div class="chart-header">
-    <div>
-      <div class="chart-title">Price vs. Carbon Intensity — scatter</div>
-      <div class="chart-subtitle" id="scatter-subtitle">Each dot = one 30-min slot</div>
-    </div>
-    <div style="font-size:1rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; expensive &amp; dirty ↗</div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:.62rem;color:var(--muted);letter-spacing:.05em;">
-        <span>dot colour: cheap</span>
-        <div style="width:80px;height:8px;border-radius:4px;background:linear-gradient(to right,#FFE8DC,#FB5400)"></div>
-        <span>expensive</span>
+<div class="scatter-grid">
+  <!-- Agile scatter -->
+  <div>
+    <div class="scatter-wrap">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Agile Price vs. Carbon — scatter</div>
+          <div class="chart-subtitle" id="scatter-subtitle-agile">Each dot = one 30-min slot</div>
+        </div>
+        <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:.6rem;color:var(--muted);padding:0 8px 10px;">
+        <span>cheap</span><div style="width:60px;height:7px;border-radius:3px;background:linear-gradient(to right,#FFE8DC,#FB5400)"></div><span>expensive</span>
+      </div>
+      <canvas id="scatter-chart-agile" height="260"></canvas>
+    </div>
+    <div class="corr-panel" id="corr-panel-agile">
+      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-agile">—</div><div class="c-desc">Agile price vs carbon</div></div>
+      <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-agile">—</div><div class="c-desc">Variance explained</div></div>
+      <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-agile">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
+      <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-agile">—</div><div class="c-desc" id="corr-interp-agile">—</div></div>
+    </div>
   </div>
-  <canvas id="scatter-chart" height="280"></canvas>
-</div>
-<div class="corr-panel" id="corr-panel">
-  <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r">—</div><div class="c-desc">Strength &amp; direction of linear relationship</div></div>
-  <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2">—</div><div class="c-desc">Variance in price explained by carbon intensity</div></div>
-  <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p">—</div><div class="c-desc">Statistical significance (p &lt; 0.05 = significant)</div></div>
-  <div class="corr-cell"><div class="c-label">OLS slope</div><div class="c-value" id="corr-slope">—</div><div class="c-desc">p/kWh change per 1 g CO₂/kWh increase</div></div>
-  <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.9rem;padding-top:4px" id="corr-strength">—</div><div class="c-desc" id="corr-interp">—</div></div>
-  <div class="corr-cell"><div class="c-label">n (data points)</div><div class="c-value" id="corr-n">—</div><div class="c-desc">Matched price + carbon half-hour slots</div></div>
+  <!-- Wholesale scatter -->
+  <div>
+    <div class="scatter-wrap" style="border-top-color:var(--wholesale-color);">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title" style="color:var(--wholesale-color)">Wholesale Price vs. Carbon — scatter</div>
+          <div class="chart-subtitle" id="scatter-subtitle-ws">Each dot = one 30-min slot</div>
+        </div>
+        <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:.6rem;color:var(--muted);padding:0 8px 10px;">
+        <span>cheap</span><div style="width:60px;height:7px;border-radius:3px;background:linear-gradient(to right,#ede9fe,#7c3aed)"></div><span>expensive</span>
+      </div>
+      <canvas id="scatter-chart-ws" height="260"></canvas>
+    </div>
+    <div class="corr-panel wholesale-panel" id="corr-panel-ws">
+      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-ws">—</div><div class="c-desc">Wholesale price vs carbon</div></div>
+      <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-ws">—</div><div class="c-desc">Variance explained</div></div>
+      <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-ws">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
+      <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-ws">—</div><div class="c-desc" id="corr-interp-ws">—</div></div>
+    </div>
+  </div>
 </div>
 
-<!-- ② REGIONAL COMPARISON: TABLE -->
+<!-- ② REGIONAL COMPARISON TABLE -->
 <div class="section-label" id="regional-section-label">Regional correlation comparison</div>
 <div class="regional-wrap" id="regional-wrap">
-  <!-- Regional correlation table -->
   <div class="region-table-panel">
     <div class="rt-title">
-      <span>Pearson's r — all 14 regions</span>
-      <button onclick="sortRegionTable()" id="sort-btn">Sort by r ↓</button>
+      <span>Pearson's r — all 14 regions &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
+      <button onclick="sortRegionTable()" id="sort-btn">Sort by Agile r ↓</button>
     </div>
     <div id="region-table-loading" class="region-table-loading">
-      <div class="spin" style="margin:0 auto 10px;"></div>
-      Fetching all regions…
+      <div class="spin" style="margin:0 auto 10px;"></div>Fetching all regions…
     </div>
     <table class="rt-table" id="region-table" style="display:none">
       <thead>
         <tr>
           <th>Region</th>
-          <th class="sortable" onclick="sortRegionTable()">r</th>
-          <th>Strength</th>
-          <th>R²</th>
+          <th class="sortable" onclick="sortRegionTable()">Agile r</th>
+          <th>Agile R²</th>
+          <th>Agile strength</th>
+          <th class="col-divider"></th>
+          <th class="ws-col sortable" onclick="sortRegionTableWs()">Wholesale r</th>
+          <th class="ws-col">Wholesale R²</th>
+          <th class="ws-col">Wholesale strength</th>
         </tr>
       </thead>
       <tbody id="region-table-body"></tbody>
@@ -249,11 +282,12 @@
   </div>
   <div class="chart-header">
     <div>
-      <div class="chart-title" id="chart-main-title">Half-hourly Agile Price &amp; Carbon Intensity</div>
-      <div class="chart-subtitle" id="chart-main-subtitle">Today — 30-min slots</div>
+      <div class="chart-title" id="chart-main-title">Electricity Price &amp; Carbon Intensity</div>
+      <div class="chart-subtitle" id="chart-main-subtitle">Last 12 months — weekly averages</div>
     </div>
     <div class="chart-legend">
-      <div class="legend-item"><div class="legend-line" style="background:var(--price-color)"></div>Agile p/kWh</div>
+      <div class="legend-item"><div class="legend-line" style="background:var(--lime)"></div>Agile p/kWh</div>
+      <div class="legend-item"><div class="legend-dash"></div>Wholesale p/kWh</div>
       <div class="legend-item"><div class="legend-line" style="background:var(--carbon-color)"></div>Carbon g/kWh</div>
     </div>
   </div>
@@ -263,19 +297,20 @@
 <!-- ④ SLOT TABLES -->
 <div class="insight-grid" id="slot-tables">
   <div class="insight-panel">
-    <div class="ip-title" id="cheap-title">Cheapest slots today</div>
+    <div class="ip-title" id="cheap-title">Cheapest slots</div>
     <div id="cheapest-slots">—</div>
   </div>
   <div class="insight-panel">
-    <div class="ip-title" id="pricey-title">Priciest slots today</div>
+    <div class="ip-title" id="pricey-title">Priciest slots</div>
     <div id="priciest-slots">—</div>
   </div>
 </div>
 
 <div class="api-footer">
-  <div class="api-source"><div class="src-label">Agile price</div><div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/…/standard-unit-rates/</div></div>
-  <div class="api-source"><div class="src-label">Carbon intensity</div><div class="src-url"><span>GET</span> api.carbonintensity.org.uk/intensity/date/{date} &amp; /intensity/{from}/{to}</div></div>
-  <div class="api-source"><div class="src-label">Statistics</div><div class="src-url" style="color:var(--muted)">Pearson's r, R², OLS and p-value computed client-side. Regional comparison fetches all 14 DNO regions in parallel.</div></div>
+  <div class="api-source"><div class="src-label">Agile retail price</div><div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/…/standard-unit-rates/ — half-hourly p/kWh inc. VAT</div></div>
+  <div class="api-source"><div class="src-label">Wholesale market price</div><div class="src-url"><span class="ws">GET</span> wholesale.json (in repo root) — pre-fetched every 30 min by GitHub Actions from Elexon BMRS Market Index Price. GB-wide, £/MWh averaged across providers, converted to p/kWh.</div></div>
+  <div class="api-source"><div class="src-label">Carbon intensity</div><div class="src-url"><span>GET</span> api.carbonintensity.org.uk — half-hourly g CO₂eq/kWh</div></div>
+  <div class="api-source"><div class="src-label">Statistics</div><div class="src-url" style="color:var(--muted)">Pearson's r, R², OLS and p-value computed client-side from matched half-hourly slots.</div></div>
 </div>
 
 </div><!-- /wrap -->
@@ -291,9 +326,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 'use strict';
-let mainChart=null,scatterChart=null;
+let mainChart=null,scatterAgile=null,scatterWs=null;
 let regionTableData=[];
-let regionTableSortAsc=false;
+let regionTableSortAgile=true,regionTableSortAsc=false;
 const ALL_REGIONS=['A','B','C','D','E','F','G','H','J','K','L','M','N','P'];
 const REGION_NAMES={A:'Eastern England',B:'East Midlands',C:'London',D:'Merseyside & N Wales',E:'North Eastern England',F:'North Western England',G:'Northern Scotland',H:'Southern England',J:'South Eastern England',K:'Southern Wales',L:'South Western England',M:'Southern Scotland',N:'West Midlands',P:'Yorkshire'};
 
@@ -358,79 +393,69 @@ function strengthLabel(r){
 }
 function formatP(p){return p<.001?'< 0.001':p.toFixed(3);}
 
-function updateCorrPanel(stats){
-  if(!stats){['corr-r','corr-r2','corr-p','corr-slope','corr-strength','corr-n'].forEach(id=>document.getElementById(id).textContent='—');document.getElementById('corr-interp').textContent='Insufficient matched data';return;}
+function updateCorrPanel(stats,suffix,accentColor){
+  accentColor=accentColor||'var(--carbon-color)';
+  if(!stats){
+    ['corr-r','corr-r2','corr-p','corr-strength'].forEach(id=>document.getElementById(id+'-'+suffix).textContent='—');
+    document.getElementById('corr-interp-'+suffix).textContent='Insufficient data';
+    return;
+  }
   const{r,r2,slope,pval,n}=stats;
-  document.getElementById('corr-r').textContent=r.toFixed(3);
-  document.getElementById('corr-r2').textContent=r2.toFixed(3);
-  document.getElementById('corr-p').textContent=formatP(pval);
-  document.getElementById('corr-slope').textContent=slope.toFixed(3)+'p';
-  document.getElementById('corr-n').textContent=n.toLocaleString();
+  const rEl=document.getElementById('corr-r-'+suffix);
+  rEl.textContent=r.toFixed(3);
+  document.getElementById('corr-r2-'+suffix).textContent=r2.toFixed(3);
+  document.getElementById('corr-p-'+suffix).textContent=formatP(pval);
   const str=strengthLabel(r);
-  document.getElementById('corr-strength').innerHTML=`<span class="strength-pill ${str.cls}">${str.text}</span>`;
-  document.getElementById('corr-r').style.color=Math.abs(r)>=.7?'var(--carbon-color)':Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)';
+  document.getElementById('corr-strength-'+suffix).innerHTML=`<span class="strength-pill ${str.cls}">${str.text}</span>`;
+  const rColor=Math.abs(r)>=.7?accentColor:Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)';
+  rEl.style.color=rColor;
   const sig=pval<.05,pct=(r2*100).toFixed(1);
-  document.getElementById('corr-interp').textContent=sig?`Significant (p${pval<.001?' < 0.001':' = '+pval.toFixed(3)}). Carbon explains ${pct}% of price variance.`:`Not significant at p < 0.05. Carbon explains only ${pct}% of price variance.`;
+  document.getElementById('corr-interp-'+suffix).textContent=sig
+    ?`Significant (p${pval<.001?' < 0.001':' = '+pval.toFixed(3)}). Explains ${pct}% of price variance.`
+    :`Not significant at p < 0.05. Explains only ${pct}%.`;
 }
-
-
 
 // ── REGIONAL TABLE ────────────────────────────────────────────────────────────
 function renderRegionTable(data){
   const tbody=document.getElementById('region-table-body');
-  const sorted=regionTableSortAsc?[...data].sort((a,b)=>a.r-b.r):[...data].sort((a,b)=>b.r-a.r);
-  tbody.innerHTML=sorted.map(row=>{
-    const rVal=row.r!==null?row.r.toFixed(3):'—';
-    const barWidth=row.r!==null?Math.round(Math.max(0,row.r)*100):0;
-    const str=row.r!==null?strengthLabel(row.r):{text:'—',cls:'none'};
-    const r2Str=row.r2!==null?row.r2.toFixed(3):'—';
-    const color=row.r!==null?(Math.abs(row.r)>=.7?'var(--carbon-color)':Math.abs(row.r)>=.4?'var(--lime-dark)':'var(--ink)'):'var(--muted)';
-    const isSelected=document.getElementById('region-select').value===row.code;
-    return`<tr style="${isSelected?'background:rgba(184,224,74,.1)':''}">
-      <td>${row.name}${isSelected?' ◀':''}</td>
-      <td><span class="r-val" style="color:${color}">${rVal}</span><span class="r-bar-wrap"><span class="r-bar" style="width:${barWidth}%;background:${color}"></span></span></td>
-      <td><span class="strength-pill ${str.cls}" style="font-size:.58rem;padding:1px 6px">${str.text}</span></td>
-      <td style="color:var(--muted)">${r2Str}</td>
-    </tr>`;
-  }).join('');
+  let sorted=[...data];
+  if(regionTableSortAgile){
+    sorted.sort((a,b)=>regionTableSortAsc?(a.r??-99)-(b.r??-99):(b.r??-99)-(a.r??-99));
+  } else {
+    sorted.sort((a,b)=>regionTableSortAsc?(a.rWs??-99)-(b.rWs??-99):(b.rWs??-99)-(a.rWs??-99));
+  }
+  const isSelected=code=>document.getElementById('region-select').value===code;
+  function rCell(r,r2,useWs){
+    const rVal=r!==null?r.toFixed(3):'—';
+    const r2Val=r2!==null?r2.toFixed(3):'—';
+    const barW=r!==null?Math.round(Math.max(0,r)*100):0;
+    const str=r!==null?strengthLabel(r):{text:'—',cls:'none'};
+    const color=r!==null?(Math.abs(r)>=.7?(useWs?'var(--wholesale-color)':'var(--carbon-color)'):Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)'):'var(--muted)';
+    const barColor=useWs?(r!==null?'var(--wholesale-color)':'transparent'):'var(--carbon-color)';
+    return `<td><span class="r-val" style="color:${color}">${rVal}</span><span class="r-bar-wrap"><span class="r-bar" style="width:${barW}%;background:${barColor}"></span></span></td>
+            <td style="color:var(--muted)">${r2Val}</td>
+            <td><span class="strength-pill ${str.cls}" style="font-size:.57rem;padding:1px 5px">${str.text}</span></td>`;
+  }
+  tbody.innerHTML=sorted.map(row=>`<tr style="${isSelected(row.code)?'background:rgba(184,224,74,.1)':''}">
+    <td>${row.name}${isSelected(row.code)?' ◀':''}</td>
+    ${rCell(row.r,row.r2,false)}
+    <td class="col-divider"></td>
+    ${rCell(row.rWs,row.r2Ws,true)}
+  </tr>`).join('');
   document.getElementById('region-table').style.display='table';
   document.getElementById('region-table-loading').style.display='none';
-  document.getElementById('sort-btn').textContent=regionTableSortAsc?'Sort by r ↑':'Sort by r ↓';
+  const asc=regionTableSortAsc?'↑':'↓';
+  document.getElementById('sort-btn').textContent=regionTableSortAgile?`Sort by Agile r ${asc}`:`Sort by Wholesale r ${asc}`;
 }
-function sortRegionTable(){
-  regionTableSortAsc=!regionTableSortAsc;
-  renderRegionTable(regionTableData);
-}
-
-// Fetch correlation for one region over given date range + carbon
-async function fetchRegionCorr(code,fromISO,toISO,carbonRaw){
-  try{
-    const agile=await fetchAgileRange(code,fromISO,toISO);
-    if(!agile.length)return{code,name:REGION_NAMES[code],r:null,r2:null,n:null};
-    const carbonMap={};
-    carbonRaw.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);carbonMap[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-    const xs=[],ys=[];
-    agile.forEach(d=>{const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);const c=carbonMap[t.toISOString()];if(c!=null){xs.push(c);ys.push(d.value_inc_vat);}});
-    const stats=computeStats(xs,ys);
-    return{code,name:REGION_NAMES[code],r:stats?stats.r:null,r2:stats?stats.r2:null,n:stats?stats.n:null};
-  }catch(e){return{code,name:REGION_NAMES[code],r:null,r2:null,n:null};}
-}
-
-async function buildRegionalTable(fromISO,toISO,carbonRaw,periodLabel){
-  document.getElementById('region-table-loading').style.display='block';
-  document.getElementById('region-table').style.display='none';
-  // Fetch all regions in parallel
-  const results=await Promise.all(ALL_REGIONS.map(code=>fetchRegionCorr(code,fromISO,toISO,carbonRaw)));
-  regionTableData=results;
-  renderRegionTable(results);
-}
+function sortRegionTable(){regionTableSortAgile=true;regionTableSortAsc=!regionTableSortAsc;renderRegionTable(regionTableData);}
+function sortRegionTableWs(){regionTableSortAgile=false;regionTableSortAsc=!regionTableSortAsc;renderRegionTable(regionTableData);}
 
 // ── API FETCHERS ──────────────────────────────────────────────────────────────
 async function fetchAgilePage(region,fromISO,toISO,page){
   const tariff=`E-1R-AGILE-24-10-01-${region}`;
   let url=`https://api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/${tariff}/standard-unit-rates/?period_from=${fromISO}&period_to=${toISO}&page_size=1500&order_by=period`;
   if(page>1)url+=`&page=${page}`;
-  const r=await fetch(url);if(!r.ok)throw new Error(`Agile ${r.status} (${region})`);
+  const r=await fetch(url);if(!r.ok)throw new Error(`Agile API ${r.status}`);
   return r.json();
 }
 async function fetchAgileRange(region,fromISO,toISO,onProgress){
@@ -451,9 +476,45 @@ async function fetchAgileNational(fromISO,toISO,onProgress){
   all.forEach(rd=>rd.forEach(s=>{if(!slotMap[s.valid_from])slotMap[s.valid_from]={valid_from:s.valid_from,valid_to:s.valid_to,prices:[]};slotMap[s.valid_from].prices.push(s.value_inc_vat);}));
   return Object.values(slotMap).filter(s=>s.prices.length>=10).map(s=>({valid_from:s.valid_from,valid_to:s.valid_to,value_inc_vat:s.prices.reduce((a,b)=>a+b,0)/s.prices.length})).sort((a,b)=>new Date(a.valid_from)-new Date(b.valid_from));
 }
+
+// Elexon wholesale market index — returns p/kWh (converted from £/MWh ÷ 10)
+// Averages across all data providers per settlement period
+// Wholesale data pre-fetched server-side by GitHub Actions every 30 min
+// stored in wholesale.json in the repo root. No CORS issues.
+// File covers last 35 days; we filter to the requested range here.
+let _wholesaleCache=null,_wholesaleCacheTime=0;
+async function fetchWholesale(fromISO,toISO){
+  try{
+    const now=Date.now();
+    if(!_wholesaleCache||now-_wholesaleCacheTime>5*60*1000){
+      const r=await fetch('./wholesale.json?t='+Math.floor(now/60000));
+      if(!r.ok){console.warn('wholesale.json not found — run GitHub Action first');return[];}
+      const j=await r.json();
+      _wholesaleCache=(j.data||[]).map(d=>({startTime:d.startTime,price:d.price_pence}));
+      _wholesaleCacheTime=now;
+      console.log('Wholesale cache: '+_wholesaleCache.length+' slots, fetched '+j.fetched_at);
+    }
+    const from=new Date(fromISO),to=new Date(toISO);
+    return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
+  }catch(e){console.warn('Wholesale fetch failed:',e);return[];}
+}
+
 async function fetchCarbonDate(d){const r=await fetch(`https://api.carbonintensity.org.uk/intensity/date/${d}`);if(!r.ok)return[];const j=await r.json();return j.data||[];}
 async function fetchCarbonRange(f,t){const r=await fetch(`https://api.carbonintensity.org.uk/intensity/${f}/${t}`);if(!r.ok)return[];const j=await r.json();return j.data||[];}
 async function fetchCurrentIntensity(){const r=await fetch('https://api.carbonintensity.org.uk/intensity');const j=await r.json();return j.data?.[0]?.intensity||{};}
+
+// Build a map from half-hour ISO key → wholesale price (p/kWh)
+function buildWholesaleMap(wholesaleData){
+  const m={};
+  wholesaleData.forEach(d=>{
+    const t=new Date(d.startTime);
+    t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
+    // Average if multiple entries round to same slot
+    const k=t.toISOString();
+    if(!m[k])m[k]=[];m[k].push(d.price);
+  });
+  return Object.fromEntries(Object.entries(m).map(([k,vs])=>[k,vs.reduce((a,b)=>a+b,0)/vs.length]));
+}
 
 // ── AGGREGATION ───────────────────────────────────────────────────────────────
 function aggregateByDay(agile){
@@ -466,86 +527,86 @@ function aggregateByWeek(agile){
   agile.forEach(d=>{const dt=new Date(d.valid_from),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byWeek[k])byWeek[k]=[];byWeek[k].push(d.value_inc_vat);});
   return Object.entries(byWeek).sort(([a],[b])=>a.localeCompare(b)).map(([w,vals])=>({date:w,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
 }
+function aggregateWsByDay(wsData){
+  const byDay={};
+  wsData.forEach(d=>{const day=new Date(d.startTime).toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byDay[day])byDay[day]=[];byDay[day].push(d.price);});
+  return Object.fromEntries(Object.entries(byDay).map(([day,vs])=>[day,vs.reduce((a,b)=>a+b,0)/vs.length]));
+}
+function aggregateWsByWeek(wsData){
+  const byWeek={};
+  wsData.forEach(d=>{const dt=new Date(d.startTime),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byWeek[k])byWeek[k]=[];byWeek[k].push(d.price);});
+  return Object.fromEntries(Object.entries(byWeek).map(([w,vs])=>[w,vs.reduce((a,b)=>a+b,0)/vs.length]));
+}
 function carbonByDay(carbon){
   const m={};
   carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const day=new Date(d.from).toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!m[day])m[day]=[];m[day].push(v);});
   return Object.fromEntries(Object.entries(m).map(([d,vs])=>[d,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-// Hourly aggregation: group by YYYY-MM-DDTHH key (UK time, truncated to hour)
-function aggregateByHour(agile){
-  const byHour={};
-  agile.forEach(d=>{
-    const dt=new Date(d.valid_from);
-    // Truncate to hour in UTC (Agile slots are UTC-aligned)
-    const hourKey=dt.toISOString().slice(0,13); // "2025-01-15T14"
-    if(!byHour[hourKey])byHour[hourKey]=[];
-    byHour[hourKey].push(d.value_inc_vat);
-  });
-  return Object.entries(byHour).sort(([a],[b])=>a.localeCompare(b))
-    .map(([hour,vals])=>({hour,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
-}
-function carbonByHour(carbon){
-  const m={};
-  carbon.forEach(d=>{
-    const v=d.intensity?.actual??d.intensity?.forecast??null;
-    if(v===null)return;
-    const hourKey=new Date(d.from).toISOString().slice(0,13);
-    if(!m[hourKey])m[hourKey]=[];m[hourKey].push(v);
-  });
-  return Object.fromEntries(Object.entries(m).map(([h,vs])=>[h,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-function formatHourLabel(hourKey){
-  // hourKey = "2025-01-15T14" — format as "15 Jan 14:00"
-  const d=new Date(hourKey+':00:00Z');
-  return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'})+' '+
-         d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});
 }
 function carbonByWeek(carbon){
   const m={};
   carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const dt=new Date(d.from),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!m[k])m[k]=[];m[k].push(v);});
   return Object.fromEntries(Object.entries(m).map(([w,vs])=>[w,vs.reduce((a,b)=>a+b,0)/vs.length]));
 }
-
-// ── CHART BUILDERS ────────────────────────────────────────────────────────────
-function buildMainChart(labels,priceData,carbonData,isAgg){
-  const ctx=document.getElementById('main-chart').getContext('2d');
-  if(mainChart)mainChart.destroy();
-  const pc=priceData.map(p=>!p&&p!==0?'transparent':p<0?'rgba(42,122,75,.85)':p<10?'rgba(184,224,74,.8)':p<20?'rgba(184,224,74,.5)':p<30?'rgba(13,43,53,.5)':'rgba(13,43,53,.8)');
-  mainChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[
-    {label:'Agile Price (p/kWh)',data:priceData,backgroundColor:pc,borderColor:pc,borderWidth:0,yAxisID:'yPrice',order:2,barPercentage:isAgg?.7:.85,categoryPercentage:.9},
-    {label:'Carbon Intensity (g CO₂/kWh)',data:carbonData,type:'line',borderColor:'rgba(42,122,75,.9)',backgroundColor:'rgba(42,122,75,.06)',borderWidth:2.5,pointRadius:isAgg?3:0,pointHoverRadius:5,tension:.4,fill:true,yAxisID:'yCarbon',order:1,spanGaps:true}
-  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#ffffff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11},padding:10,callbacks:{label:ctx=>ctx.dataset.label.includes('Agile')&&ctx.parsed.y!=null?` ${isAgg?'Avg ':''}Price: ${ctx.parsed.y.toFixed(2)} p/kWh`:ctx.dataset.label.includes('Carbon')&&ctx.parsed.y!=null?` ${isAgg?'Avg ':''}Carbon: ${ctx.parsed.y.toFixed(0)} g CO₂/kWh`:null}}},scales:{x:{ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',maxTicksLimit:14,maxRotation:0},grid:{display:false},border:{color:'#c8d8d0'}},yPrice:{position:'left',title:{display:true,text:isAgg?'avg p/kWh':'p/kWh',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#0d2b35',callback:v=>v.toFixed(0)+'p'},grid:{color:'rgba(200,216,208,.5)'},border:{color:'#c8d8d0'}},yCarbon:{position:'right',title:{display:true,text:'g CO₂/kWh',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},grid:{display:false},border:{color:'#c8d8d0'}}}}});
+function aggregateByHour(agile){
+  const byHour={};
+  agile.forEach(d=>{const k=new Date(d.valid_from).toISOString().slice(0,13);if(!byHour[k])byHour[k]=[];byHour[k].push(d.value_inc_vat);});
+  return Object.entries(byHour).sort(([a],[b])=>a.localeCompare(b)).map(([hour,vals])=>({hour,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
 }
+function carbonByHour(carbon){
+  const m={};
+  carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const k=new Date(d.from).toISOString().slice(0,13);if(!m[k])m[k]=[];m[k].push(v);});
+  return Object.fromEntries(Object.entries(m).map(([h,vs])=>[h,vs.reduce((a,b)=>a+b,0)/vs.length]));
+}
+function formatHourLabel(h){const d=new Date(h+':00:00Z');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});}
 
-function buildScatter(agile,carbon){
+// ── SCATTER BUILDERS ──────────────────────────────────────────────────────────
+function buildScatterAgile(agile,carbon){
   const cm={};
   carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
   const pts=[];
   agile.forEach(d=>{const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);const c=cm[t.toISOString()];if(c!=null)pts.push({x:c,y:parseFloat(d.value_inc_vat.toFixed(2))});});
   const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
-  updateCorrPanel(stats);
+  updateCorrPanel(stats,'agile','var(--carbon-color)');
   const trendDs=[];
-  if(stats){
-    const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x));
-    trendDs.push({label:'OLS trendline',data:[{x:minX,y:stats.slope*minX+stats.intercept},{x:maxX,y:stats.slope*maxX+stats.intercept}],type:'line',borderColor:'rgba(13,43,53,.7)',borderWidth:2,borderDash:[6,3],pointRadius:0,fill:false,tension:0});
-  }
-  const sample=pts.length>1200?pts.filter((_,i)=>i%Math.ceil(pts.length/1200)===0):pts;
-  // Price gradient: #FFE8DC (cheap/negative) → #FB5400 (expensive)
-  const allPrices=sample.map(p=>p.y);
-  const minP=Math.min(...allPrices),maxP=Math.max(...allPrices);
-  function priceToColor(price){
-    const t=Math.max(0,Math.min(1,(price-minP)/(maxP-minP||1)));
-    const r=Math.round(255+(251-255)*t);
-    const g=Math.round(232+(84-232)*t);
-    const b=Math.round(220+(0-220)*t);
-    return`rgba(${r},${g},${b},0.85)`;
-  }
-  const ctx=document.getElementById('scatter-chart').getContext('2d');
-  if(scatterChart)scatterChart.destroy();
-  scatterChart=new Chart(ctx,{type:'scatter',data:{datasets:[
-    {label:'Price vs Carbon',data:sample,backgroundColor:sample.map(p=>priceToColor(p.y)),pointRadius:3,pointHoverRadius:6},
-    ...trendDs
-  ]},options:{responsive:true,plugins:{legend:{display:true,labels:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',boxWidth:20,padding:16,filter:item=>item.datasetIndex===1}},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#ffffff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x} g CO₂/kWh  →  ${ctx.parsed.y}p/kWh`:` Trendline: ${ctx.parsed.y.toFixed(1)}p/kWh`}}},scales:{x:{title:{display:true,text:'Carbon Intensity (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Agile Price (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}}}}});
+  if(stats&&pts.length){const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x));trendDs.push({label:'OLS trendline',data:[{x:minX,y:stats.slope*minX+stats.intercept},{x:maxX,y:stats.slope*maxX+stats.intercept}],type:'line',borderColor:'rgba(13,43,53,.6)',borderWidth:2,borderDash:[5,3],pointRadius:0,fill:false,tension:0});}
+  const sample=pts.length>1000?pts.filter((_,i)=>i%Math.ceil(pts.length/1000)===0):pts;
+  const allP=sample.map(p=>p.y),minP=Math.min(...allP),maxP=Math.max(...allP);
+  function agileColor(p){const t=Math.max(0,Math.min(1,(p-minP)/(maxP-minP||1)));return`rgba(${Math.round(255+(251-255)*t)},${Math.round(232+(84-232)*t)},${Math.round(220+(0-220)*t)},0.85)`;}
+  const ctx=document.getElementById('scatter-chart-agile').getContext('2d');
+  if(scatterAgile)scatterAgile.destroy();
+  scatterAgile=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'Agile vs Carbon',data:sample,backgroundColor:sample.map(p=>agileColor(p.y)),pointRadius:3,pointHoverRadius:5},...trendDs]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:10},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x}g CO₂  →  ${ctx.parsed.y}p`:` Trend: ${ctx.parsed.y.toFixed(1)}p`}}},scales:{x:{title:{display:true,text:'Carbon (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Agile (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}}}}});
+  return stats;
+}
+
+function buildScatterWs(wsData,carbon){
+  const cm={};
+  carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
+  const wsMap=buildWholesaleMap(wsData);
+  const pts=[];
+  Object.entries(wsMap).forEach(([k,price])=>{const c=cm[k];if(c!=null)pts.push({x:c,y:parseFloat(price.toFixed(2))});});
+  const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
+  updateCorrPanel(stats,'ws','var(--wholesale-color)');
+  const trendDs=[];
+  if(stats&&pts.length){const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x));trendDs.push({label:'OLS trendline',data:[{x:minX,y:stats.slope*minX+stats.intercept},{x:maxX,y:stats.slope*maxX+stats.intercept}],type:'line',borderColor:'rgba(124,58,237,.6)',borderWidth:2,borderDash:[5,3],pointRadius:0,fill:false,tension:0});}
+  const sample=pts.length>1000?pts.filter((_,i)=>i%Math.ceil(pts.length/1000)===0):pts;
+  const allP=sample.map(p=>p.y),minP=Math.min(...allP),maxP=Math.max(...allP);
+  function wsColor(p){const t=Math.max(0,Math.min(1,(p-minP)/(maxP-minP||1)));return`rgba(${Math.round(237+(124-237)*t)},${Math.round(233+(58-233)*t)},${Math.round(254+(237-254)*t)},0.9)`;}
+  const ctx=document.getElementById('scatter-chart-ws').getContext('2d');
+  if(scatterWs)scatterWs.destroy();
+  scatterWs=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'Wholesale vs Carbon',data:sample,backgroundColor:sample.map(p=>wsColor(p.y)),pointRadius:3,pointHoverRadius:5},...trendDs]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:10},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x}g CO₂  →  ${ctx.parsed.y.toFixed(2)}p`:` Trend: ${ctx.parsed.y.toFixed(1)}p`}}},scales:{x:{title:{display:true,text:'Carbon (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Wholesale (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#7c3aed'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}}}}});
+  return stats;
+}
+
+// ── MAIN CHART ────────────────────────────────────────────────────────────────
+function buildMainChart(labels,priceData,wsData,carbonData,isAgg){
+  const ctx=document.getElementById('main-chart').getContext('2d');
+  if(mainChart)mainChart.destroy();
+  const agileColors=priceData.map(p=>!p&&p!==0?'transparent':p<0?'rgba(42,122,75,.85)':p<10?'rgba(184,224,74,.8)':p<20?'rgba(184,224,74,.5)':p<30?'rgba(13,43,53,.5)':'rgba(13,43,53,.8)');
+  mainChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[
+    {label:'Agile Price (p/kWh)',data:priceData,backgroundColor:agileColors,borderColor:agileColors,borderWidth:0,yAxisID:'yPrice',order:3,barPercentage:isAgg?.6:.8,categoryPercentage:.85},
+    {label:'Wholesale Price (p/kWh)',data:wsData,type:'line',borderColor:'rgba(124,58,237,.8)',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,yAxisID:'yPrice',order:2,spanGaps:true},
+    {label:'Carbon Intensity (g CO₂/kWh)',data:carbonData,type:'line',borderColor:'rgba(42,122,75,.9)',backgroundColor:'rgba(42,122,75,.05)',borderWidth:2,pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,fill:true,yAxisID:'yCarbon',order:1,spanGaps:true}
+  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11},padding:10,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Agile')&&ctx.parsed.y!=null)return` ${isAgg?'Avg ':''}Agile: ${ctx.parsed.y.toFixed(2)}p/kWh`;if(ctx.dataset.label.includes('Wholesale')&&ctx.parsed.y!=null)return` ${isAgg?'Avg ':''}Wholesale: ${ctx.parsed.y.toFixed(2)}p/kWh`;if(ctx.dataset.label.includes('Carbon')&&ctx.parsed.y!=null)return` Carbon: ${ctx.parsed.y.toFixed(0)} g CO₂/kWh`;return null;}}}},scales:{x:{ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',maxTicksLimit:14,maxRotation:0},grid:{display:false},border:{color:'#c8d8d0'}},yPrice:{position:'left',title:{display:true,text:'p/kWh',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#0d2b35',callback:v=>v.toFixed(0)+'p'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}},yCarbon:{position:'right',title:{display:true,text:'g CO₂/kWh',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},grid:{display:false},border:{color:'#c8d8d0'}}}}});
 }
 
 function buildSlotTables(agile){
@@ -556,42 +617,76 @@ function buildSlotTables(agile){
 }
 function buildAggSlotTables(agg,label){
   const sorted=[...agg].sort((a,b)=>a.avg-b.avg);
-  const labelKey=label==='hour'?'hour':'date';
   const formatLabel=label==='hour'?d=>formatHourLabel(d.hour):d=>d.date;
   const row=d=>`<div class="price-row"><span class="time">${formatLabel(d)}</span><span class="price-badge ${priceBadgeClass(d.avg)}">${d.avg.toFixed(1)}p avg</span></div>`;
-  document.getElementById('cheap-title').textContent=`Cheapest ${label}s`;
-  document.getElementById('pricey-title').textContent=`Priciest ${label}s`;
+  document.getElementById('cheap-title').textContent=`Cheapest ${label}s (Agile)`;
+  document.getElementById('pricey-title').textContent=`Priciest ${label}s (Agile)`;
   document.getElementById('cheapest-slots').innerHTML=sorted.slice(0,5).map(row).join('');
   document.getElementById('priciest-slots').innerHTML=sorted.slice(-5).reverse().map(row).join('');
 }
 
 // ── STATS STRIP ───────────────────────────────────────────────────────────────
 function setStatLabels(todayMode){
-  document.getElementById('sl-current').textContent=todayMode?'Current Price':'Latest Price';
-  document.getElementById('sl-avg').textContent=todayMode?"Today's Avg":'Period Avg';
-  document.getElementById('sl-min').textContent=todayMode?"Today's Min":'Period Min';
-  document.getElementById('sl-max').textContent=todayMode?"Today's Max":'Period Max';
+  document.getElementById('sl-current').textContent=todayMode?'Current Agile Price':'Latest Agile Price';
+  document.getElementById('sl-avg').textContent=todayMode?"Today's Avg (Agile)":'Period Avg (Agile)';
+  document.getElementById('sl-min').textContent='Period Min (Agile)';
   document.getElementById('sl-carbon').textContent=todayMode?'Carbon Now':'Avg Carbon';
-  document.getElementById('sl-neg').textContent='Negative Slots';
-  document.getElementById('su-neg').textContent='half-hour periods';
   document.getElementById('su-carbon').textContent=todayMode?'g CO₂eq / kWh':'g CO₂eq / kWh (avg)';
+  document.getElementById('sl-ws').textContent=todayMode?'Current Wholesale':'Period Avg Wholesale';
 }
-function fillStats(agile,carbonVal){
+function fillStats(agile,wsData,carbonVal){
   const now=new Date();
   const prices=agile.map(d=>d.value_inc_vat);
   const avg=prices.reduce((a,b)=>a+b,0)/prices.length;
   const current=agile.find(d=>new Date(d.valid_from)<=now&&new Date(d.valid_to)>now)||agile[agile.length-1];
   document.getElementById('stat-current-price').textContent=current?current.value_inc_vat.toFixed(1):'—';
-  // Timestamp for current slot
   const tsEl=document.getElementById('stat-current-timestamp');
-  if(tsEl&&current){
-    tsEl.textContent=formatTime(current.valid_from)+' – '+formatTime(current.valid_to);
-  }
+  if(tsEl&&current)tsEl.textContent=formatTime(current.valid_from)+' – '+formatTime(current.valid_to);
   document.getElementById('stat-avg-price').textContent=avg.toFixed(1);
   document.getElementById('stat-min-price').textContent=Math.min(...prices).toFixed(1);
-  document.getElementById('stat-max-price').textContent=Math.max(...prices).toFixed(1);
   document.getElementById('stat-carbon').textContent=carbonVal!==null&&carbonVal!==undefined?typeof carbonVal==='object'?(carbonVal.actual??carbonVal.forecast??'—'):carbonVal.toFixed(0):'—';
   document.getElementById('stat-neg-slots').textContent=prices.filter(p=>p<0).length;
+  // Wholesale current/avg
+  if(wsData&&wsData.length){
+    const wsMap=buildWholesaleMap(wsData);
+    const wsVals=Object.values(wsMap);
+    const wsAvg=wsVals.length?wsVals.reduce((a,b)=>a+b,0)/wsVals.length:null;
+    // Find current slot in wholesale
+    let wsCurrent=null;
+    if(current){
+      const t=new Date(current.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
+      wsCurrent=wsMap[t.toISOString()]??wsAvg;
+    }
+    document.getElementById('stat-ws-price').textContent=(wsCurrent??wsAvg)!==null?((wsCurrent??wsAvg)).toFixed(1):'—';
+  } else {
+    document.getElementById('stat-ws-price').textContent='—';
+  }
+}
+
+// ── REGIONAL TABLE WITH WHOLESALE ────────────────────────────────────────────
+async function fetchRegionCorr(code,fromISO,toISO,carbonRaw,wsData){
+  try{
+    const agile=await fetchAgileRange(code,fromISO,toISO);
+    const carbonMap={};
+    carbonRaw.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);carbonMap[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
+    const wsMap=buildWholesaleMap(wsData||[]);
+    const xsA=[],ysA=[],xsW=[],ysW=[];
+    agile.forEach(d=>{
+      const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
+      const k=t.toISOString(),c=carbonMap[k];
+      if(c!=null){xsA.push(c);ysA.push(d.value_inc_vat);}
+    });
+    Object.entries(wsMap).forEach(([k,price])=>{const c=carbonMap[k];if(c!=null){xsW.push(c);ysW.push(price);}});
+    const sA=computeStats(xsA,ysA),sW=computeStats(xsW,ysW);
+    return{code,name:REGION_NAMES[code],r:sA?sA.r:null,r2:sA?sA.r2:null,rWs:sW?sW.r:null,r2Ws:sW?sW.r2:null};
+  }catch(e){return{code,name:REGION_NAMES[code],r:null,r2:null,rWs:null,r2Ws:null};}
+}
+async function buildRegionalTable(fromISO,toISO,carbonRaw,wsData){
+  document.getElementById('region-table-loading').style.display='block';
+  document.getElementById('region-table').style.display='none';
+  const results=await Promise.all(ALL_REGIONS.map(code=>fetchRegionCorr(code,fromISO,toISO,carbonRaw,wsData)));
+  regionTableData=results;
+  renderRegionTable(results);
 }
 
 // ── MAIN LOAD ─────────────────────────────────────────────────────────────────
@@ -599,10 +694,7 @@ function onPeriodChange(){
   const period=document.getElementById('period-select').value;
   const picker=document.getElementById('day-picker');
   picker.style.display=period==='day'?'inline-block':'none';
-  // Set default date to yesterday if nothing chosen yet
-  if(period==='day'&&!picker.value){
-    picker.value=dateNDaysAgo(1);
-  }
+  if(period==='day'&&!picker.value)picker.value=dateNDaysAgo(1);
   loadData();
 }
 async function loadData(){
@@ -610,65 +702,51 @@ async function loadData(){
   const period=document.getElementById('period-select').value;
   const isNat=region==='ALL';
   document.getElementById('uk-total-note').classList.toggle('visible',isNat);
-  setLoader(true,'Fetching live data…');
-  setProgress(0);
+  setLoader(true,'Fetching live data…');setProgress(0);
   document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Europe/London'});
   try{
     if(period==='today')await loadToday(region,isNat);
     else if(period==='month')await loadMonth(region,isNat);
-    else if(period==='day'){
-      const picked=document.getElementById('day-picker').value;
-      if(picked)await loadSpecificDay(region,isNat,picked);
-      else{setLoader(false);return;}
-    }
+    else if(period==='day'){const picked=document.getElementById('day-picker').value;if(picked)await loadSpecificDay(region,isNat,picked);else{setLoader(false);return;}}
     else await loadYear(region,isNat);
-  }catch(err){
-    document.getElementById('main-loader').style.display='flex';
-    document.getElementById('loader-msg').textContent='⚠ '+err.message;
-    console.error(err);
-  }
+  }catch(err){document.getElementById('main-loader').style.display='flex';document.getElementById('loader-msg').textContent='⚠ '+err.message;console.error(err);}
   setProgress(100);setLoader(false);
 }
 
 // ── LAST 24 HOURS ─────────────────────────────────────────────────────────────
 async function loadToday(region,isNat){
-  // Rolling 24h window: from 24h ago to now
   const now=new Date();
   const from24=new Date(now.getTime()-24*60*60*1000);
   const fromISO=from24.toISOString().replace(/\.\d{3}Z$/,'Z');
   const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
   let agile;
-  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*50),`Fetching regions… ${_d}/${t}`));}
+  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*40),`Regions ${_d}/${t}…`));}
   else agile=await fetchAgileRange(region,fromISO,toISO);
-  // Carbon: fetch yesterday + today to cover the 24h window
   const todayStr=todayUK(),yesterdayStr=dateNDaysAgo(1);
-  const [carbonToday,carbonYesterday,carbonNow]=await Promise.all([
-    fetchCarbonDate(todayStr),
-    fetchCarbonDate(yesterdayStr),
-    fetchCurrentIntensity()
-  ]);
+  const[carbonToday,carbonYesterday,carbonNow,wsData]=await Promise.all([fetchCarbonDate(todayStr),fetchCarbonDate(yesterdayStr),fetchCurrentIntensity(),fetchWholesale(fromISO,toISO)]);
   const carbon=[...carbonYesterday,...carbonToday];
-  if(!agile.length)throw new Error("No Agile data for the last 24 hours — Octopus publishes next-day prices after ~4pm.");
-  // Filter agile to strictly last 24h
+  if(!agile.length)throw new Error("No Agile data for the last 24 hours.");
   const agile24=agile.filter(d=>new Date(d.valid_from)>=from24);
   const cm={};carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-  const labels=[],pd=[],cd=[];
-  agile24.forEach(d=>{
-    labels.push(formatTime(d.valid_from));
-    pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
+  const wsMap=buildWholesaleMap(wsData);
+  const labels=[],pd=[],wsd=[],cd=[];
+  (agile24.length?agile24:agile).forEach(d=>{
+    labels.push(formatTime(d.valid_from));pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
     const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-    cd.push(cm[t.toISOString()]??null);
+    cd.push(cm[t.toISOString()]??null);wsd.push(wsMap[t.toISOString()]??null);
   });
-  document.getElementById('chart-main-title').textContent='Half-hourly Agile Price & Carbon Intensity';
+  const used=agile24.length?agile24:agile;
+  document.getElementById('chart-main-title').textContent='Electricity Price & Carbon Intensity';
   document.getElementById('chart-main-subtitle').textContent=`Last 24 hours — 30-min slots${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot (last 24 hours${isNat?', national avg':''})`;
-  document.getElementById('cheap-title').textContent='Cheapest slots — last 24h';
-  document.getElementById('pricey-title').textContent='Priciest slots — last 24h';
-  setStatLabels(true);fillStats(agile24.length?agile24:agile,carbonNow);
-  buildScatter(agile24.length?agile24:agile,carbon);
-  buildMainChart(labels,pd,cd,false);
-  buildSlotTables(agile24.length?agile24:agile);
-  buildRegionalTable(fromISO,toISO,carbon,'24 hours').catch(()=>{});
+  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots, last 24h${isNat?' (national avg)':''}`;
+  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots, last 24h (wholesale)`;
+  document.getElementById('cheap-title').textContent='Cheapest Agile slots — last 24h';
+  document.getElementById('pricey-title').textContent='Priciest Agile slots — last 24h';
+  setStatLabels(true);fillStats(used,wsData,carbonNow);
+  buildScatterAgile(used,carbon);buildScatterWs(wsData,carbon);
+  buildMainChart(labels,pd,wsd,cd,false);
+  buildSlotTables(used);
+  buildRegionalTable(fromISO,toISO,carbon,wsData).catch(()=>{});
 }
 
 // ── LAST 30 DAYS ──────────────────────────────────────────────────────────────
@@ -679,107 +757,106 @@ async function loadMonth(region,isNat){
   const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
   setProgress(10,isNat?'Fetching all 14 regions…':'Fetching 30 days…');
   let agileRaw;
-  if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*50),`Fetched ${_d}/${t} regions…`));
-  else agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*50),`Agile prices… ${_d}/${t}`));
-  // Carbon: fetch in two chunks to cover 30 days
-  const carbonRaw=[];
+  if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*40),`Regions ${_d}/${t}…`));
+  else agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*40),`Prices ${_d}/${t}`));
+  setProgress(55,'Fetching carbon & wholesale…');
   const midDate=dateNDaysAgo(15);
-  const [c1,c2]=await Promise.all([
-    fetchCarbonRange(fromISO,`${midDate}T00:00Z`),
-    fetchCarbonRange(`${midDate}T00:00Z`,toISO)
-  ]);
-  carbonRaw.push(...c1,...c2);
-  setProgress(75,'Aggregating daily…');
-  // Main chart: daily averages; scatter uses raw half-hourly slots
-  const aByD=aggregateByDay(agileRaw),cByD=carbonByDay(carbonRaw);
+  const[c1,c2,wsData]=await Promise.all([fetchCarbonRange(fromISO,`${midDate}T00:00Z`),fetchCarbonRange(`${midDate}T00:00Z`,toISO),fetchWholesale(fromISO,toISO)]);
+  const carbonRaw=[...c1,...c2];
+  setProgress(80,'Aggregating…');
+  const aByD=aggregateByDay(agileRaw),cByD=carbonByDay(carbonRaw),wsByD=aggregateWsByDay(wsData);
   const labels=aByD.map(d=>formatDate(d.date+'T12:00:00'));
   const pd=aByD.map(d=>parseFloat(d.avg.toFixed(2)));
+  const wsd=aByD.map(d=>{const v=wsByD[d.date];return v!==undefined?parseFloat(v.toFixed(2)):null;});
   const cd=aByD.map(d=>{const v=cByD[d.date];return v!==undefined?parseFloat(v.toFixed(0)):null;});
   const cAvg=Object.values(cByD).length?Object.values(cByD).reduce((a,b)=>a+b,0)/Object.values(cByD).length:null;
-  document.getElementById('chart-main-title').textContent='Daily Average Agile Price & Carbon Intensity';
+  document.getElementById('chart-main-title').textContent='Daily Average Price & Carbon Intensity';
   document.getElementById('chart-main-subtitle').textContent=`Last 30 days — daily averages${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot (last 30 days${isNat?', national avg':''})`;
-  setStatLabels(false);fillStats(agileRaw,cAvg);
-  buildScatter(agileRaw,carbonRaw);
-  buildMainChart(labels,pd,cd,true);
+  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots, last 30 days${isNat?' (national avg)':''}`;
+  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots, last 30 days (wholesale)`;
+  setStatLabels(false);fillStats(agileRaw,wsData,cAvg);
+  buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsData,carbonRaw);
+  buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByD,'day');
-  buildRegionalTable(fromISO,toISO,carbonRaw,'30 days').catch(()=>{});
+  buildRegionalTable(fromISO,toISO,carbonRaw,wsData).catch(()=>{});
   setProgress(100);
 }
 
 // ── SPECIFIC DAY ──────────────────────────────────────────────────────────────
 async function loadSpecificDay(region,isNat,dateStr){
-  // dateStr is YYYY-MM-DD; fetch from midnight to midnight UTC next day
   const fromISO=`${dateStr}T00:00Z`;
-  const nextDay=new Date(dateStr+'T00:00Z');
-  nextDay.setDate(nextDay.getDate()+1);
+  const nextDay=new Date(dateStr+'T00:00Z');nextDay.setDate(nextDay.getDate()+1);
   const toISO=nextDay.toISOString().replace(/\.\d{3}Z$/,'Z');
   let agile;
-  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*60),`Fetching regions… ${_d}/${t}`));}
+  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*50),`Regions ${_d}/${t}…`));}
   else agile=await fetchAgileRange(region,fromISO,toISO);
-  const carbon=await fetchCarbonDate(dateStr);
-  if(!agile.length)throw new Error(`No Agile data for ${dateStr} — data may not be available for this date.`);
+  const[carbon,wsData]=await Promise.all([fetchCarbonDate(dateStr),fetchWholesale(fromISO,toISO)]);
+  if(!agile.length)throw new Error(`No Agile data for ${dateStr}.`);
   const cm={};carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-  const labels=[],pd=[],cd=[];
+  const wsMap=buildWholesaleMap(wsData);
+  const labels=[],pd=[],wsd=[],cd=[];
   agile.forEach(d=>{
-    labels.push(formatTime(d.valid_from));
-    pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
+    labels.push(formatTime(d.valid_from));pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
     const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-    cd.push(cm[t.toISOString()]??null);
+    cd.push(cm[t.toISOString()]??null);wsd.push(wsMap[t.toISOString()]??null);
   });
-  const friendlyDate=new Date(dateStr+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('chart-main-title').textContent='Half-hourly Agile Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`${friendlyDate}${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot — ${friendlyDate}${isNat?', national avg':''}`;
-  document.getElementById('cheap-title').textContent=`Cheapest slots — ${dateStr}`;
-  document.getElementById('pricey-title').textContent=`Priciest slots — ${dateStr}`;
+  const friendly=new Date(dateStr+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   const carbonAvg=carbon.length?carbon.reduce((s,d)=>s+(d.intensity?.actual??d.intensity?.forecast??0),0)/carbon.length:null;
-  setStatLabels(true);fillStats(agile,carbonAvg!==null?{actual:Math.round(carbonAvg)}:null);
-  buildScatter(agile,carbon);
-  buildMainChart(labels,pd,cd,false);
+  document.getElementById('chart-main-title').textContent='Electricity Price & Carbon Intensity';
+  document.getElementById('chart-main-subtitle').textContent=`${friendly}${isNat?' (national avg)':''}`;
+  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots — ${friendly}`;
+  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots — ${friendly} (wholesale)`;
+  document.getElementById('cheap-title').textContent=`Cheapest Agile slots — ${dateStr}`;
+  document.getElementById('pricey-title').textContent=`Priciest Agile slots — ${dateStr}`;
+  setStatLabels(true);fillStats(agile,wsData,carbonAvg!==null?{actual:Math.round(carbonAvg)}:null);
+  buildScatterAgile(agile,carbon);buildScatterWs(wsData,carbon);
+  buildMainChart(labels,pd,wsd,cd,false);
   buildSlotTables(agile);
-  buildRegionalTable(fromISO,toISO,carbon,friendlyDate).catch(()=>{});
+  buildRegionalTable(fromISO,toISO,carbon,wsData).catch(()=>{});
 }
 
 // ── LAST 12 MONTHS ────────────────────────────────────────────────────────────
 async function loadYear(region,isNat){
-  setProgress(5,isNat?'Fetching 12 months across all 14 regions…':'Fetching 12 months…');
+  setProgress(5,isNat?'Fetching 12 months across all regions…':'Fetching 12 months…');
   setLoader(true,isNat?'Fetching national data — ~30s…':'Fetching 12 months — please wait…');
   const fromDate=dateNDaysAgo(365),toDate=dateNDaysAgo(-1);
   const fromISO=`${fromDate}T00:00Z`,toISO=`${toDate}T00:00Z`;
   let agileRaw;
-  if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(5+Math.round(_d/t*45),`Fetched ${_d}/${t} regions…`));
-  else{setProgress(10,'Fetching Agile price history…');agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*45),`Agile prices… ${_d}/${t}`));}
-  setProgress(58,'Fetching carbon intensity history…');
+  if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(5+Math.round(_d/t*35),`Regions ${_d}/${t}…`));
+  else{setProgress(10,'Fetching Agile price history…');agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*35),`Prices ${_d}/${t}`));}
+  setProgress(45,'Fetching carbon intensity…');
   const carbonRaw=[];
   const chunks=Math.ceil(365/14);
   for(let i=0;i<chunks;i++){
     const cf=dateNDaysAgo(365-i*14),ct=dateNDaysAgo(Math.max(365-(i+1)*14,-1));
     try{const ch=await fetchCarbonRange(`${cf}T00:00Z`,`${ct}T00:00Z`);carbonRaw.push(...ch);}catch(e){}
-    setProgress(58+Math.round(((i+1)/chunks)*30),`Carbon chunk ${i+1}/${chunks}`);
+    setProgress(45+Math.round(((i+1)/chunks)*25),`Carbon ${i+1}/${chunks}`);
   }
+  setProgress(72,'Loading wholesale prices from cache…');
+  // wholesale.json is pre-fetched by GitHub Actions — one fast local read
+  const wsRaw=await fetchWholesale(fromISO,toISO);
+  console.log('Year view wholesale slots:',wsRaw.length);
   setProgress(90,'Building charts…');
-  const aByW=aggregateByWeek(agileRaw),cByW=carbonByWeek(carbonRaw);
+  const aByW=aggregateByWeek(agileRaw),cByW=carbonByWeek(carbonRaw),wsByW=aggregateWsByWeek(wsRaw);
   const labels=aByW.map(d=>new Date(d.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'}));
   const pd=aByW.map(d=>parseFloat(d.avg.toFixed(2)));
+  const wsd=aByW.map(d=>{const v=wsByW[d.date];return v!==undefined?parseFloat(v.toFixed(2)):null;});
   const cd=aByW.map(d=>{const v=cByW[d.date];return v!==undefined?parseFloat(v.toFixed(0)):null;});
   const cAvg=Object.values(cByW).length?Object.values(cByW).reduce((a,b)=>a+b,0)/Object.values(cByW).length:null;
-  document.getElementById('chart-main-title').textContent='Weekly Average Agile Price & Carbon Intensity';
+  document.getElementById('chart-main-title').textContent='Weekly Average Price & Carbon Intensity';
   document.getElementById('chart-main-subtitle').textContent=`Last 12 months — weekly averages${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle').textContent=`Each dot = one 30-min slot — sampled, ${agileRaw.length.toLocaleString()} total${isNat?', national avg':''}`;
-  setStatLabels(false);fillStats(agileRaw,cAvg);
-  buildScatter(agileRaw,carbonRaw);
-  buildMainChart(labels,pd,cd,true);
+  document.getElementById('scatter-subtitle-agile').textContent=`Sampled — ${agileRaw.length.toLocaleString()} slots${isNat?', national avg':''}`;
+  document.getElementById('scatter-subtitle-ws').textContent=`Sampled — ${wsRaw.length.toLocaleString()} wholesale slots`;
+  setStatLabels(false);fillStats(agileRaw,wsRaw,cAvg);
+  buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsRaw,carbonRaw);
+  buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByW,'week');
-  buildRegionalTable(fromISO,toISO,carbonRaw,'12 months').catch(()=>{});
+  buildRegionalTable(fromISO,toISO,carbonRaw,wsRaw).catch(()=>{});
   setProgress(100);
 }
 
-// Set date picker bounds: min = 1 year ago, max = yesterday
 const _picker=document.getElementById('day-picker');
-_picker.max=dateNDaysAgo(1);
-_picker.min=dateNDaysAgo(365);
-
+_picker.max=dateNDaysAgo(1);_picker.min=dateNDaysAgo(365);
 loadData();
 setInterval(()=>{const p=document.getElementById('period-select').value;if(p==='today'||p==='month')loadData();},30*60*1000);
 </script>
