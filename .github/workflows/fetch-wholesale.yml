@@ -17,7 +17,7 @@ jobs:
 
       - name: Fetch 6 days of Elexon wholesale data
         run: |
-          # can only filter 6 days because 7 is the maxx
+          # can only filter 6 days because 7 is the max
           FROM=$(date -u -d '6 days ago' '+%Y-%m-%dT%H:%M:%SZ')
           TO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
           echo "Fetching from $FROM to $TO"
