@@ -18,7 +18,7 @@ jobs:
       - name: Fetch 35 days of Elexon wholesale data
         run: |
           # 35 days back to cover the 30-day view plus buffer
-          FROM=$(date -u -d '35 days ago' '+%Y-%m-%dT%H:%M:%SZ')
+          FROM=$(date -u -d '7 days ago' '+%Y-%m-%dT%H:%M:%SZ')
           TO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
           echo "Fetching from $FROM to $TO"
 
