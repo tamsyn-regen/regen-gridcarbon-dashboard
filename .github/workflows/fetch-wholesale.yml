@@ -2,8 +2,8 @@ name: Fetch Wholesale Prices
 
 on:
   schedule:
-    - cron: '*/30 * * * *'   # every 30 minutes
-  workflow_dispatch:           # manual trigger from Actions tab
+    - cron: '0 */6 * * *'   # every 6 hours
+  workflow_dispatch:
 
 jobs:
   fetch:
@@ -15,107 +15,93 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch 6 days of Elexon wholesale data
+      - name: Fetch Elexon wholesale data in 7-day chunks
         run: |
-          # can only filter 6 days because 7 is the max
-          FROM=$(date -u -d '6 days ago' '+%Y-%m-%dT%H:%M:%SZ')
-          TO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-          echo "Fetching from $FROM to $TO"
-
-          HTTP_STATUS=$(curl -s \
-            -o raw_wholesale.json \
-            -w "%{http_code}" \
-            "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=${FROM}&to=${TO}&format=json")
-          
-          echo "HTTP status: $HTTP_STATUS"
-
-          python3 - << 'PYEOF'
-          import json
-          
-          with open('raw_wholesale.json') as f:
-              d = json.load(f)
-          
-          print("TOP LEVEL KEYS:")
-          print(list(d.keys()))
-          
-          if 'data' in d:
-              print("DATA LENGTH:", len(d['data']))
-              if len(d['data']) > 0:
-                  print("FIRST RECORD:")
-                  print(d['data'][0])
-          else:
-              print("NO 'data' FIELD FOUND")
-              print(d)
-          PYEOF
-
-          if [ "$HTTP_STATUS" != "200" ]; then
-            echo "API returned $HTTP_STATUS — aborting"
-            exit 1
-          fi
-
-          # Check we got actual data
-          RECORD_COUNT=$(python3 -c "import json,sys; d=json.load(open('raw_wholesale.json')); print(len(d.get('data',[])))" 2>/dev/null || echo "0")
-          echo "Records fetched: $RECORD_COUNT"
-
-          if [ "$RECORD_COUNT" = "0" ]; then
-            echo "No records returned — aborting to preserve existing file"
-            exit 0
-          fi
-
-          # Process: average across data providers per settlement period,
-          # convert £/MWh → p/kWh (÷10), output clean array
-          python3 << 'PYEOF'
-          import json, sys
+          python3 - << 'PYEOF2'
+          import json, time, sys
+          from datetime import datetime, timedelta, timezone
           from collections import defaultdict
-          
-          with open('raw_wholesale.json') as f:
-              raw = json.load(f)
-          
-          data = raw.get('data', [])
-          
-          # Group by startTime, average marketIndexPrice across providers
+          import urllib.request as urllib2
+
+          def fetch_chunk(from_date, to_date):
+              url = (
+                  "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index"
+                  f"?from={from_date}&to={to_date}&format=json"
+              )
+              print(f"  Fetching {from_date} -> {to_date} ...", flush=True)
+              try:
+                  req = urllib2.Request(url, headers={"Accept": "application/json"})
+                  with urllib2.urlopen(req, timeout=30) as resp:
+                      if resp.status != 200:
+                          print(f"  HTTP {resp.status} - skipping")
+                          return []
+                      data = json.loads(resp.read().decode())
+                      records = data.get("data", [])
+                      print(f"  Got {len(records)} records")
+                      return records
+              except Exception as e:
+                  print(f"  Error: {e} - skipping chunk")
+                  return []
+
+          today = datetime.now(timezone.utc).date()
+          all_records = []
+          chunk_days = 7
+          total_days = 365
+          chunks = total_days // chunk_days
+
+          for i in range(chunks):
+              days_back_end   = i * chunk_days
+              days_back_start = (i + 1) * chunk_days
+              to_date   = (today - timedelta(days=days_back_end)).isoformat()
+              from_date = (today - timedelta(days=days_back_start)).isoformat()
+              records = fetch_chunk(from_date, to_date)
+              all_records.extend(records)
+              time.sleep(0.3)
+
+          print(f"Total raw records: {len(all_records)}")
+
           by_slot = defaultdict(list)
-          for row in data:
-              price = row.get('marketIndexPrice')
-              start = row.get('startTime')
+          for row in all_records:
+              price = row.get("marketIndexPrice")
+              start = row.get("startTime")
               if price is not None and start is not None:
                   by_slot[start].append(float(price))
-          
-          # Build output list sorted by time, price in p/kWh
-          output = []
-          for start_time, prices in sorted(by_slot.items()):
-              avg_mwh = sum(prices) / len(prices)
-              output.append({
-                  "startTime": start_time,
-                  "price_pence": round(avg_mwh / 10, 4)   # £/MWh → p/kWh
-              })
-          
+
+          output = [
+              {
+                  "startTime": k,
+                  "price_pence": round(sum(v) / len(v) / 10, 4)
+              }
+              for k, v in sorted(by_slot.items())
+          ]
+
+          print(f"Processed slots: {len(output)}")
+          if output:
+              print(f"Date range: {output[0]['startTime']} -> {output[-1]['startTime']}")
+
           result = {
-              "fetched_at": __import__('datetime').datetime.utcnow().isoformat() + 'Z',
+              "fetched_at": datetime.now(timezone.utc).isoformat(),
               "record_count": len(output),
               "unit": "p/kWh",
-              "source": "Elexon BMRS Market Index Price (avg across providers, converted from £/MWh)",
+              "source": "Elexon BMRS Market Index Price (avg across providers, converted from GBP/MWh)",
               "data": output
           }
-          
-          with open('wholesale.json', 'w') as f:
-              json.dump(result, f, separators=(',', ':'))
-          
-          print(f"Written {len(output)} slots to wholesale.json")
-          PYEOF
+
+          with open("wholesale.json", "w") as f:
+              json.dump(result, f, separators=(",", ":"))
+
+          print(f"Written wholesale.json with {len(output)} slots")
+          PYEOF2
 
       - name: Commit wholesale.json if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add wholesale.json
-
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update wholesale prices"
-
+            git commit -m "chore: update wholesale prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
             git pull --rebase origin main
             git push origin main
           fi
