@@ -35,11 +35,17 @@ jobs:
           with open('raw_wholesale.json') as f:
               d = json.load(f)
           
-          print("Keys:")
-          print(d.keys())
+          print("TOP LEVEL KEYS:")
+          print(list(d.keys()))
           
-          print("Sample:")
-          print(d.get('data',[{}])[0])
+          if 'data' in d:
+              print("DATA LENGTH:", len(d['data']))
+              if len(d['data']) > 0:
+                  print("FIRST RECORD:")
+                  print(d['data'][0])
+          else:
+              print("NO 'data' FIELD FOUND")
+              print(d)
           PYEOF
 
           if [ "$HTTP_STATUS" != "200" ]; then
