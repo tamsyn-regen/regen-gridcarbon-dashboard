@@ -22,10 +22,13 @@ jobs:
           TO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
           echo "Fetching from $FROM to $TO"
 
-          HTTP_STATUS=$(curl -s -o raw_wholesale.json -w "%{http_code}" \
+          HTTP_STATUS=$(curl -s \
+            -o raw_wholesale.json \
+            -w "%{http_code}" \
             "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=${FROM}&to=${TO}&format=json")
-
+          
           echo "HTTP status: $HTTP_STATUS"
+          cat raw_wholesale.json
 
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "API returned $HTTP_STATUS — aborting"
