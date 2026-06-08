@@ -32,7 +32,7 @@
   .control-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);white-space:nowrap;}
   .control-divider{width:1px;height:28px;background:var(--border);margin:0 4px;}
   select{font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:var(--paper);border:1px solid var(--border);color:var(--ink);padding:8px 14px;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230d2b35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
-  #region-select{min-width:220px;}#period-select{min-width:160px;}
+  #period-select{min-width:160px;}
   select:focus{border-color:var(--ink);}
   .refresh-btn{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:#fff;border:none;padding:8px 18px;cursor:pointer;transition:background .15s;white-space:nowrap;}
   .refresh-btn:hover{background:var(--lime);color:var(--ink);}
@@ -144,29 +144,10 @@
 
 <div class="intro-block">
   <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
-  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a region and time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale market index prices (Elexon BMRS) for comparison. Please be patient while data loads.</p>
+  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale market index prices (Elexon BMRS) for comparison. Please be patient while data loads.</p>
 </div>
 
 <div class="controls">
-  <span class="control-label">Region</span>
-  <select id="region-select" onchange="loadData()">
-    <option value="ALL">── GB Total (all regions avg) ──</option>
-    <option value="A">Eastern England</option>
-    <option value="B">East Midlands</option>
-    <option value="C" selected>London</option>
-    <option value="D">Merseyside &amp; N Wales</option>
-    <option value="E">North Eastern England</option>
-    <option value="F">North Western England</option>
-    <option value="G">Northern Scotland</option>
-    <option value="H">Southern England</option>
-    <option value="J">South Eastern England</option>
-    <option value="K">Southern Wales</option>
-    <option value="L">South Western England</option>
-    <option value="M">Southern Scotland</option>
-    <option value="N">West Midlands</option>
-    <option value="P">Yorkshire</option>
-  </select>
-  <div class="control-divider"></div>
   <span class="control-label">Period</span>
   <select id="period-select" onchange="onPeriodChange()">
     <option value="today">Last 24 hours</option>
@@ -178,9 +159,6 @@
   <button class="refresh-btn" id="refresh-btn" onclick="loadData()">↻ Refresh</button>
 </div>
 
-<div class="uk-total-note" id="uk-total-note">
-  <strong>GB Total</strong> — Agile prices averaged across all 14 DNO regions. Carbon and wholesale prices use the GB national average. Regional network charges vary; this is an indicative national mean.
-</div>
 <div class="progress-wrap" id="progress-wrap">
   <div class="progress-label" id="progress-label">Fetching data…</div>
   <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
@@ -217,7 +195,7 @@
       <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-agile">—</div><div class="c-desc">Agile price vs carbon</div></div>
       <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-agile">—</div><div class="c-desc">Variance explained</div></div>
       <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-agile">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
-      <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-agile">—</div><div class="c-desc" id="corr-interp-agile">—</div></div>
+      <div class="corr-cell"><div class="c-label">Correlation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-agile">—</div><div class="c-desc" id="corr-interp-agile">—</div></div>
     </div>
   </div>
   <!-- Wholesale scatter -->
@@ -239,36 +217,35 @@
       <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-ws">—</div><div class="c-desc">Wholesale price vs carbon</div></div>
       <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-ws">—</div><div class="c-desc">Variance explained</div></div>
       <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-ws">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
-      <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-ws">—</div><div class="c-desc" id="corr-interp-ws">—</div></div>
+      <div class="corr-cell"><div class="c-label">Correlation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-ws">—</div><div class="c-desc" id="corr-interp-ws">—</div></div>
     </div>
   </div>
 </div>
 
-<!-- ② REGIONAL COMPARISON TABLE -->
-<div class="section-label" id="regional-section-label">Regional correlation comparison</div>
-<div class="regional-wrap" id="regional-wrap">
+<!-- ② TIMEFRAME CORRELATION TABLE -->
+<div class="section-label">Correlation by time period — GB</div>
+<div class="regional-wrap" id="timeframe-wrap">
   <div class="region-table-panel">
     <div class="rt-title">
-      <span>Pearson's r — all 14 regions &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
-      <button onclick="sortRegionTable()" id="sort-btn">Sort by Agile r ↓</button>
+      <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
     </div>
-    <div id="region-table-loading" class="region-table-loading">
-      <div class="spin" style="margin:0 auto 10px;"></div>Fetching all regions…
+    <div id="timeframe-table-loading" class="region-table-loading">
+      <div class="spin" style="margin:0 auto 10px;"></div>Computing correlations…
     </div>
-    <table class="rt-table" id="region-table" style="display:none">
+    <table class="rt-table" id="timeframe-table" style="display:none">
       <thead>
         <tr>
-          <th>Region</th>
-          <th class="sortable" onclick="sortRegionTable()">Agile r</th>
+          <th>Time period</th>
+          <th>Agile r</th>
           <th>Agile R²</th>
           <th>Agile strength</th>
           <th class="col-divider"></th>
-          <th class="ws-col sortable" onclick="sortRegionTableWs()">Wholesale r</th>
+          <th class="ws-col">Wholesale r</th>
           <th class="ws-col">Wholesale R²</th>
           <th class="ws-col">Wholesale strength</th>
         </tr>
       </thead>
-      <tbody id="region-table-body"></tbody>
+      <tbody id="timeframe-table-body"></tbody>
     </table>
   </div>
 </div>
@@ -327,10 +304,7 @@
 <script>
 'use strict';
 let mainChart=null,scatterAgile=null,scatterWs=null;
-let regionTableData=[];
-let regionTableSortAgile=true,regionTableSortAsc=false;
 const ALL_REGIONS=['A','B','C','D','E','F','G','H','J','K','L','M','N','P'];
-const REGION_NAMES={A:'Eastern England',B:'East Midlands',C:'London',D:'Merseyside & N Wales',E:'North Eastern England',F:'North Western England',G:'Northern Scotland',H:'Southern England',J:'South Eastern England',K:'Southern Wales',L:'South Western England',M:'Southern Scotland',N:'West Midlands',P:'Yorkshire'};
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const todayUK=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Europe/London'});
@@ -415,40 +389,66 @@ function updateCorrPanel(stats,suffix,accentColor){
     :`Not significant at p < 0.05. Explains only ${pct}%.`;
 }
 
-// ── REGIONAL TABLE ────────────────────────────────────────────────────────────
-function renderRegionTable(data){
-  const tbody=document.getElementById('region-table-body');
-  let sorted=[...data];
-  if(regionTableSortAgile){
-    sorted.sort((a,b)=>regionTableSortAsc?(a.r??-99)-(b.r??-99):(b.r??-99)-(a.r??-99));
-  } else {
-    sorted.sort((a,b)=>regionTableSortAsc?(a.rWs??-99)-(b.rWs??-99):(b.rWs??-99)-(a.rWs??-99));
-  }
-  const isSelected=code=>document.getElementById('region-select').value===code;
-  function rCell(r,r2,useWs){
-    const rVal=r!==null?r.toFixed(3):'—';
-    const r2Val=r2!==null?r2.toFixed(3):'—';
-    const barW=r!==null?Math.round(Math.max(0,r)*100):0;
-    const str=r!==null?strengthLabel(r):{text:'—',cls:'none'};
-    const color=r!==null?(Math.abs(r)>=.7?(useWs?'var(--wholesale-color)':'var(--carbon-color)'):Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)'):'var(--muted)';
-    const barColor=useWs?(r!==null?'var(--wholesale-color)':'transparent'):'var(--carbon-color)';
-    return `<td><span class="r-val" style="color:${color}">${rVal}</span><span class="r-bar-wrap"><span class="r-bar" style="width:${barW}%;background:${barColor}"></span></span></td>
-            <td style="color:var(--muted)">${r2Val}</td>
-            <td><span class="strength-pill ${str.cls}" style="font-size:.57rem;padding:1px 5px">${str.text}</span></td>`;
-  }
-  tbody.innerHTML=sorted.map(row=>`<tr style="${isSelected(row.code)?'background:rgba(184,224,74,.1)':''}">
-    <td>${row.name}${isSelected(row.code)?' ◀':''}</td>
+// ── TIMEFRAME CORRELATION TABLE ──────────────────────────────────────────────
+function rCell(r,r2,useWs){
+  const rVal=r!==null?r.toFixed(3):'—';
+  const r2Val=r2!==null?r2.toFixed(3):'—';
+  const barW=r!==null?Math.round(Math.max(0,r)*100):0;
+  const str=r!==null?strengthLabel(r):{text:'—',cls:'none'};
+  const color=r!==null?(Math.abs(r)>=.7?(useWs?'var(--wholesale-color)':'var(--carbon-color)'):Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)'):'var(--muted)';
+  const barColor=useWs?(r!==null?'var(--wholesale-color)':'transparent'):'var(--carbon-color)';
+  return `<td><span class="r-val" style="color:${color}">${rVal}</span><span class="r-bar-wrap"><span class="r-bar" style="width:${barW}%;background:${barColor}"></span></span></td>
+          <td style="color:var(--muted)">${r2Val}</td>
+          <td><span class="strength-pill ${str.cls}" style="font-size:.57rem;padding:1px 5px">${str.text}</span></td>`;
+}
+
+function renderTimeframeTable(rows){
+  const tbody=document.getElementById('timeframe-table-body');
+  tbody.innerHTML=rows.map(row=>`<tr>
+    <td><strong>${row.label}</strong></td>
     ${rCell(row.r,row.r2,false)}
     <td class="col-divider"></td>
     ${rCell(row.rWs,row.r2Ws,true)}
   </tr>`).join('');
-  document.getElementById('region-table').style.display='table';
-  document.getElementById('region-table-loading').style.display='none';
-  const asc=regionTableSortAsc?'↑':'↓';
-  document.getElementById('sort-btn').textContent=regionTableSortAgile?`Sort by Agile r ${asc}`:`Sort by Wholesale r ${asc}`;
+  document.getElementById('timeframe-table').style.display='table';
+  document.getElementById('timeframe-table-loading').style.display='none';
 }
-function sortRegionTable(){regionTableSortAgile=true;regionTableSortAsc=!regionTableSortAsc;renderRegionTable(regionTableData);}
-function sortRegionTableWs(){regionTableSortAgile=false;regionTableSortAsc=!regionTableSortAsc;renderRegionTable(regionTableData);}
+
+// Compute correlation for a given agile + carbon + ws window
+function computeTimeframeCorr(agile,carbonRaw,wsData){
+  const carbonMap={};
+  carbonRaw.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);carbonMap[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
+  const wsMap=buildWholesaleMap(wsData||[]);
+  const xsA=[],ysA=[],xsW=[],ysW=[];
+  agile.forEach(d=>{
+    const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
+    const k=t.toISOString(),c=carbonMap[k];
+    if(c!=null){xsA.push(c);ysA.push(d.value_inc_vat);}
+  });
+  Object.entries(wsMap).forEach(([k,price])=>{const c=carbonMap[k];if(c!=null){xsW.push(c);ysW.push(price);}});
+  const sA=computeStats(xsA,ysA),sW=computeStats(xsW,ysW);
+  return{r:sA?sA.r:null,r2:sA?sA.r2:null,rWs:sW?sW.r:null,r2Ws:sW?sW.r2:null};
+}
+
+async function buildTimeframeTable(allAgile,allCarbon,allWs){
+  document.getElementById('timeframe-table-loading').style.display='block';
+  document.getElementById('timeframe-table').style.display='none';
+  const now=new Date();
+  const cutoffs={
+    '1 day':   new Date(now.getTime()-1*24*60*60*1000),
+    '1 week':  new Date(now.getTime()-7*24*60*60*1000),
+    '1 month': new Date(now.getTime()-30*24*60*60*1000),
+    'Past year':new Date(now.getTime()-365*24*60*60*1000),
+  };
+  const rows=Object.entries(cutoffs).map(([label,cutoff])=>{
+    const agileSlice=allAgile.filter(d=>new Date(d.valid_from)>=cutoff);
+    const carbonSlice=allCarbon.filter(d=>new Date(d.from)>=cutoff);
+    const wsSlice=allWs.filter(d=>new Date(d.startTime)>=cutoff);
+    const corr=computeTimeframeCorr(agileSlice,carbonSlice,wsSlice);
+    return{label,...corr};
+  });
+  renderTimeframeTable(rows);
+}
 
 // ── API FETCHERS ──────────────────────────────────────────────────────────────
 async function fetchAgilePage(region,fromISO,toISO,page){
@@ -632,7 +632,7 @@ function setStatLabels(todayMode){
   document.getElementById('sl-min').textContent='Period Min (Agile)';
   document.getElementById('sl-carbon').textContent=todayMode?'Carbon Now':'Avg Carbon';
   document.getElementById('su-carbon').textContent=todayMode?'g CO₂eq / kWh':'g CO₂eq / kWh (avg)';
-  document.getElementById('sl-ws').textContent=todayMode?'Current Wholesale':'Period Avg Wholesale';
+  document.getElementById('sl-ws').textContent=todayMode?'Current Wholesale (GB)':'Period Avg Wholesale (GB)';
 }
 function fillStats(agile,wsData,carbonVal){
   const now=new Date();
@@ -663,31 +663,7 @@ function fillStats(agile,wsData,carbonVal){
   }
 }
 
-// ── REGIONAL TABLE WITH WHOLESALE ────────────────────────────────────────────
-async function fetchRegionCorr(code,fromISO,toISO,carbonRaw,wsData){
-  try{
-    const agile=await fetchAgileRange(code,fromISO,toISO);
-    const carbonMap={};
-    carbonRaw.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);carbonMap[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-    const wsMap=buildWholesaleMap(wsData||[]);
-    const xsA=[],ysA=[],xsW=[],ysW=[];
-    agile.forEach(d=>{
-      const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-      const k=t.toISOString(),c=carbonMap[k];
-      if(c!=null){xsA.push(c);ysA.push(d.value_inc_vat);}
-    });
-    Object.entries(wsMap).forEach(([k,price])=>{const c=carbonMap[k];if(c!=null){xsW.push(c);ysW.push(price);}});
-    const sA=computeStats(xsA,ysA),sW=computeStats(xsW,ysW);
-    return{code,name:REGION_NAMES[code],r:sA?sA.r:null,r2:sA?sA.r2:null,rWs:sW?sW.r:null,r2Ws:sW?sW.r2:null};
-  }catch(e){return{code,name:REGION_NAMES[code],r:null,r2:null,rWs:null,r2Ws:null};}
-}
-async function buildRegionalTable(fromISO,toISO,carbonRaw,wsData){
-  document.getElementById('region-table-loading').style.display='block';
-  document.getElementById('region-table').style.display='none';
-  const results=await Promise.all(ALL_REGIONS.map(code=>fetchRegionCorr(code,fromISO,toISO,carbonRaw,wsData)));
-  regionTableData=results;
-  renderRegionTable(results);
-}
+
 
 // ── MAIN LOAD ─────────────────────────────────────────────────────────────────
 function onPeriodChange(){
@@ -698,30 +674,26 @@ function onPeriodChange(){
   loadData();
 }
 async function loadData(){
-  const region=document.getElementById('region-select').value;
   const period=document.getElementById('period-select').value;
-  const isNat=region==='ALL';
-  document.getElementById('uk-total-note').classList.toggle('visible',isNat);
   setLoader(true,'Fetching live data…');setProgress(0);
   document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Europe/London'});
   try{
-    if(period==='today')await loadToday(region,isNat);
-    else if(period==='month')await loadMonth(region,isNat);
-    else if(period==='day'){const picked=document.getElementById('day-picker').value;if(picked)await loadSpecificDay(region,isNat,picked);else{setLoader(false);return;}}
-    else await loadYear(region,isNat);
+    if(period==='today')await loadToday();
+    else if(period==='month')await loadMonth();
+    else if(period==='day'){const picked=document.getElementById('day-picker').value;if(picked)await loadSpecificDay(picked);else{setLoader(false);return;}}
+    else await loadYear();
   }catch(err){document.getElementById('main-loader').style.display='flex';document.getElementById('loader-msg').textContent='⚠ '+err.message;console.error(err);}
   setProgress(100);setLoader(false);
 }
 
 // ── LAST 24 HOURS ─────────────────────────────────────────────────────────────
-async function loadToday(region,isNat){
+async function loadToday(){
   const now=new Date();
   const from24=new Date(now.getTime()-24*60*60*1000);
   const fromISO=from24.toISOString().replace(/\.\d{3}Z$/,'Z');
   const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
-  let agile;
-  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*40),`Regions ${_d}/${t}…`));}
-  else agile=await fetchAgileRange(region,fromISO,toISO);
+  setProgress(10,'Fetching GB national data…');
+  const agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*40),`Regions ${_d}/${t}…`));
   const todayStr=todayUK(),yesterdayStr=dateNDaysAgo(1);
   const[carbonToday,carbonYesterday,carbonNow,wsData]=await Promise.all([fetchCarbonDate(todayStr),fetchCarbonDate(yesterdayStr),fetchCurrentIntensity(),fetchWholesale(fromISO,toISO)]);
   const carbon=[...carbonYesterday,...carbonToday];
@@ -737,20 +709,21 @@ async function loadToday(region,isNat){
   });
   const used=agile24.length?agile24:agile;
   document.getElementById('chart-main-title').textContent='Electricity Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Last 24 hours — 30-min slots${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots, last 24h${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots, last 24h (wholesale)`;
+  document.getElementById('chart-main-subtitle').textContent='Last 24 hours — 30-min slots (GB national avg)';
+  document.getElementById('scatter-subtitle-agile').textContent='30-min slots, last 24h (GB national avg)';
+  document.getElementById('scatter-subtitle-ws').textContent='30-min slots, last 24h (wholesale)';
   document.getElementById('cheap-title').textContent='Cheapest Agile slots — last 24h';
   document.getElementById('pricey-title').textContent='Priciest Agile slots — last 24h';
   setStatLabels(true);fillStats(used,wsData,carbonNow);
   buildScatterAgile(used,carbon);buildScatterWs(wsData,carbon);
   buildMainChart(labels,pd,wsd,cd,false);
   buildSlotTables(used);
-  buildRegionalTable(fromISO,toISO,carbon,wsData).catch(()=>{});
+  buildTimeframeTable(used,carbon,wsData).catch(()=>{});
 }
 
 // ── LAST 30 DAYS ──────────────────────────────────────────────────────────────
-async function loadMonth(region,isNat){
+async function loadMonth(){
+  const isNat=true;const region='ALL';
   const now=new Date();
   const from30=new Date(now.getTime()-30*24*60*60*1000);
   const fromISO=from30.toISOString().replace(/\.\d{3}Z$/,'Z');
@@ -771,19 +744,20 @@ async function loadMonth(region,isNat){
   const cd=aByD.map(d=>{const v=cByD[d.date];return v!==undefined?parseFloat(v.toFixed(0)):null;});
   const cAvg=Object.values(cByD).length?Object.values(cByD).reduce((a,b)=>a+b,0)/Object.values(cByD).length:null;
   document.getElementById('chart-main-title').textContent='Daily Average Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Last 30 days — daily averages${isNat?' (national avg)':''}`;
+  document.getElementById('chart-main-subtitle').textContent='Last 30 days — daily averages (GB national avg)';
   document.getElementById('scatter-subtitle-agile').textContent=`30-min slots, last 30 days${isNat?' (national avg)':''}`;
   document.getElementById('scatter-subtitle-ws').textContent=`30-min slots, last 30 days (wholesale)`;
   setStatLabels(false);fillStats(agileRaw,wsData,cAvg);
   buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsData,carbonRaw);
   buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByD,'day');
-  buildRegionalTable(fromISO,toISO,carbonRaw,wsData).catch(()=>{});
+  buildTimeframeTable(agileRaw,carbonRaw,wsData).catch(()=>{});
   setProgress(100);
 }
 
 // ── SPECIFIC DAY ──────────────────────────────────────────────────────────────
-async function loadSpecificDay(region,isNat,dateStr){
+async function loadSpecificDay(dateStr){
+  const isNat=true;const region='ALL';
   const fromISO=`${dateStr}T00:00Z`;
   const nextDay=new Date(dateStr+'T00:00Z');nextDay.setDate(nextDay.getDate()+1);
   const toISO=nextDay.toISOString().replace(/\.\d{3}Z$/,'Z');
@@ -812,11 +786,12 @@ async function loadSpecificDay(region,isNat,dateStr){
   buildScatterAgile(agile,carbon);buildScatterWs(wsData,carbon);
   buildMainChart(labels,pd,wsd,cd,false);
   buildSlotTables(agile);
-  buildRegionalTable(fromISO,toISO,carbon,wsData).catch(()=>{});
+  buildTimeframeTable(agile,carbon,wsData).catch(()=>{});
 }
 
 // ── LAST 12 MONTHS ────────────────────────────────────────────────────────────
-async function loadYear(region,isNat){
+async function loadYear(){
+  const isNat=true;const region='ALL';
   setProgress(5,isNat?'Fetching 12 months across all regions…':'Fetching 12 months…');
   setLoader(true,isNat?'Fetching national data — ~30s…':'Fetching 12 months — please wait…');
   const fromDate=dateNDaysAgo(365),toDate=dateNDaysAgo(-1);
@@ -851,7 +826,7 @@ async function loadYear(region,isNat){
   buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsRaw,carbonRaw);
   buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByW,'week');
-  buildRegionalTable(fromISO,toISO,carbonRaw,wsRaw).catch(()=>{});
+  buildTimeframeTable(agileRaw,carbonRaw,wsRaw).catch(()=>{});
   setProgress(100);
 }
 
