@@ -44,44 +44,44 @@ jobs:
           # Process: average across data providers per settlement period,
           # convert £/MWh → p/kWh (÷10), output clean array
           python3 << 'PYEOF'
-import json, sys
-from collections import defaultdict
-
-with open('raw_wholesale.json') as f:
-    raw = json.load(f)
-
-data = raw.get('data', [])
-
-# Group by startTime, average marketIndexPrice across providers
-by_slot = defaultdict(list)
-for row in data:
-    price = row.get('marketIndexPrice')
-    start = row.get('startTime')
-    if price is not None and start is not None:
-        by_slot[start].append(float(price))
-
-# Build output list sorted by time, price in p/kWh
-output = []
-for start_time, prices in sorted(by_slot.items()):
-    avg_mwh = sum(prices) / len(prices)
-    output.append({
-        "startTime": start_time,
-        "price_pence": round(avg_mwh / 10, 4)   # £/MWh → p/kWh
-    })
-
-result = {
-    "fetched_at": __import__('datetime').datetime.utcnow().isoformat() + 'Z',
-    "record_count": len(output),
-    "unit": "p/kWh",
-    "source": "Elexon BMRS Market Index Price (avg across providers, converted from £/MWh)",
-    "data": output
-}
-
-with open('wholesale.json', 'w') as f:
-    json.dump(result, f, separators=(',', ':'))
-
-print(f"Written {len(output)} slots to wholesale.json")
-PYEOF
+          import json, sys
+          from collections import defaultdict
+          
+          with open('raw_wholesale.json') as f:
+              raw = json.load(f)
+          
+          data = raw.get('data', [])
+          
+          # Group by startTime, average marketIndexPrice across providers
+          by_slot = defaultdict(list)
+          for row in data:
+              price = row.get('marketIndexPrice')
+              start = row.get('startTime')
+              if price is not None and start is not None:
+                  by_slot[start].append(float(price))
+          
+          # Build output list sorted by time, price in p/kWh
+          output = []
+          for start_time, prices in sorted(by_slot.items()):
+              avg_mwh = sum(prices) / len(prices)
+              output.append({
+                  "startTime": start_time,
+                  "price_pence": round(avg_mwh / 10, 4)   # £/MWh → p/kWh
+              })
+          
+          result = {
+              "fetched_at": __import__('datetime').datetime.utcnow().isoformat() + 'Z',
+              "record_count": len(output),
+              "unit": "p/kWh",
+              "source": "Elexon BMRS Market Index Price (avg across providers, converted from £/MWh)",
+              "data": output
+          }
+          
+          with open('wholesale.json', 'w') as f:
+              json.dump(result, f, separators=(',', ':'))
+          
+          print(f"Written {len(output)} slots to wholesale.json")
+          PYEOF
 
       - name: Commit wholesale.json if changed
         run: |
