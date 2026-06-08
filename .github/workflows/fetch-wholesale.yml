@@ -1,864 +1,96 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GB Grid — Price × Carbon Intensity</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg:#f0f4f2;--ink:#0d2b35;--paper:#ffffff;--border:#c8d8d0;--muted:#5e7a72;
-    --price-color:#0d2b35;--carbon-color:#2a7a4b;--lime:#b8e04a;--lime-dark:#8ab52e;
-    --wholesale-color:#7c3aed;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--bg);color:var(--ink);font-family:'IBM Plex Mono',monospace;min-height:100vh;}
-  body::after{content:'';position:fixed;inset:0;background-image:radial-gradient(circle,rgba(13,43,53,.05) 1px,transparent 1px);background-size:8px 8px;pointer-events:none;z-index:0;opacity:.6;}
-  .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:40px 28px 64px;}
-  header{border-top:4px solid var(--lime);border-bottom:1px solid var(--border);padding:20px 0 16px;margin-bottom:0;display:grid;grid-template-columns:1fr auto;align-items:start;gap:16px;background:var(--ink);margin-left:-28px;margin-right:-28px;padding-left:28px;padding-right:28px;}
-  .masthead{font-family:'Fraunces',serif;font-size:clamp(2rem,5vw,3.4rem);font-weight:700;line-height:1;letter-spacing:-.02em;color:#ffffff;}
-  .masthead em{font-style:italic;font-weight:300;color:var(--lime);}
-  .header-meta{text-align:right;}
-  .live-indicator{display:inline-flex;align-items:center;gap:6px;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--lime);border:1px solid var(--lime);padding:4px 10px;margin-bottom:6px;}
-  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:blink 1.4s ease-in-out infinite;}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-  .header-date{font-size:.68rem;color:rgba(255,255,255,.5);letter-spacing:.04em;}
-  .regen-logo{display:block;margin-top:10px;width:90px;opacity:.95;}
-  .intro-block{background:var(--ink);color:#fff;margin-left:-28px;margin-right:-28px;padding:28px 28px 32px;margin-bottom:32px;border-bottom:1px solid rgba(255,255,255,.1);}
-  .intro-block h2{font-family:'Fraunces',serif;font-size:clamp(1.3rem,3vw,2rem);font-weight:700;line-height:1.2;letter-spacing:-.02em;color:#fff;margin-bottom:12px;}
-  .intro-block h2 em{font-style:italic;font-weight:300;color:var(--lime);}
-  .intro-block p{font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.7;max-width:700px;}
-  .controls{display:flex;align-items:center;gap:12px;margin-bottom:28px;flex-wrap:wrap;}
-  .control-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);white-space:nowrap;}
-  .control-divider{width:1px;height:28px;background:var(--border);margin:0 4px;}
-  select{font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:var(--paper);border:1px solid var(--border);color:var(--ink);padding:8px 14px;cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%230d2b35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
-  #region-select{min-width:220px;}#period-select{min-width:160px;}
-  select:focus{border-color:var(--ink);}
-  .refresh-btn{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:#fff;border:none;padding:8px 18px;cursor:pointer;transition:background .15s;white-space:nowrap;}
-  .refresh-btn:hover{background:var(--lime);color:var(--ink);}
-  .refresh-btn:disabled{background:var(--muted);cursor:not-allowed;}
-  .uk-total-note{display:none;background:rgba(184,224,74,.1);border:1px solid rgba(184,224,74,.4);padding:10px 16px;margin-bottom:20px;font-size:.7rem;color:var(--ink);line-height:1.6;}
-  .uk-total-note.visible{display:block;}
-  .progress-wrap{margin-bottom:20px;display:none;}
-  .progress-wrap.visible{display:block;}
-  .progress-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;}
-  .progress-track{height:3px;background:var(--border);width:100%;}
-  .progress-bar{height:100%;background:var(--lime);width:0%;transition:width .3s ease;}
-  .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;border:1px solid var(--border);margin-bottom:28px;background:var(--border);}
-  .stat-cell{background:var(--paper);padding:16px 20px;}
-  .stat-cell .s-label{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;}
-  .stat-cell .s-value{font-family:'Fraunces',serif;font-size:1.8rem;font-weight:700;line-height:1;letter-spacing:-.02em;}
-  .stat-cell .s-unit{font-size:.6rem;color:var(--muted);margin-top:3px;letter-spacing:.06em;}
-  .stat-cell .s-timestamp{font-size:.58rem;color:var(--muted);margin-top:2px;letter-spacing:.04em;opacity:.8;}
-  .section-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:12px;}
-  .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
-  /* SCATTER */
-  .scatter-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0;}
-  @media(max-width:700px){.scatter-grid{grid-template-columns:1fr;}}
-  .scatter-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;border-bottom:none;}
-  .corr-panel{border:1px solid var(--border);border-top:3px solid var(--lime);margin-bottom:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;background:var(--border);}
-  .corr-panel.wholesale-panel{border-top-color:var(--wholesale-color);}
-  .corr-cell{background:var(--paper);padding:14px 18px;}
-  .corr-cell .c-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;}
-  .corr-cell .c-value{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1;}
-  .corr-cell .c-desc{font-size:.62rem;color:var(--muted);margin-top:4px;line-height:1.4;}
-  .strength-pill{display:inline-block;font-size:.62rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;margin-top:4px;}
-  .strength-pill.strong{background:rgba(42,122,75,.12);color:var(--carbon-color);}
-  .strength-pill.moderate{background:rgba(184,224,74,.2);color:#5a7820;}
-  .strength-pill.weak{background:rgba(13,43,53,.07);color:var(--ink);}
-  .strength-pill.none{background:rgba(94,122,114,.12);color:var(--muted);}
-  /* REGIONAL COMPARISON */
-  .regional-wrap{display:block;margin-bottom:28px;}
-  .region-table-panel{background:var(--paper);border:1px solid var(--border);padding:16px;}
-  .region-table-panel .rt-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
-  .region-table-panel .rt-title button{font-family:'IBM Plex Mono',monospace;font-size:.6rem;background:none;border:1px solid var(--border);color:var(--muted);padding:2px 8px;cursor:pointer;}
-  .region-table-panel .rt-title button:hover{border-color:var(--ink);color:var(--ink);}
-  .region-table-loading{padding:40px 20px;text-align:center;font-size:.7rem;color:var(--muted);letter-spacing:.08em;}
-  .rt-table{width:100%;border-collapse:collapse;font-size:.72rem;}
-  .rt-table th{font-size:.58rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:2px solid var(--lime);}
-  .rt-table th.sortable{cursor:pointer;}
-  .rt-table th.sortable:hover{color:var(--ink);}
-  .rt-table th.ws-col{border-bottom-color:var(--wholesale-color);color:var(--wholesale-color);}
-  .rt-table td{padding:6px 8px;border-bottom:1px dashed var(--border);vertical-align:middle;}
-  .rt-table tr:last-child td{border-bottom:none;}
-  .rt-table tr:hover td{background:rgba(212,206,187,.15);}
-  /* Divider column between Agile and wholesale sections */
-  .rt-table td.col-divider,.rt-table th.col-divider{width:4px;padding:0;background:var(--border);border-bottom:none;}
-  .r-bar-wrap{width:60px;height:5px;background:rgba(212,206,187,.5);display:inline-block;vertical-align:middle;margin-left:5px;}
-  .r-bar{height:100%;}
-  .r-val{font-weight:600;font-family:'Fraunces',serif;font-size:.9rem;}
-  .loading-row td{text-align:center;color:var(--muted);font-size:.68rem;letter-spacing:.06em;padding:24px;}
-  /* MAIN CHART */
-  .chart-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;margin-bottom:20px;position:relative;}
-  .chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding:0 8px;flex-wrap:wrap;gap:12px;}
-  .chart-title{font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;letter-spacing:-.01em;}
-  .chart-subtitle{font-size:.62rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:3px;}
-  .chart-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
-  .legend-item{display:flex;align-items:center;gap:7px;font-size:.65rem;letter-spacing:.06em;text-transform:uppercase;}
-  .legend-line{width:24px;height:3px;border-radius:2px;}
-  .legend-dash{width:24px;height:3px;background:repeating-linear-gradient(90deg,var(--wholesale-color) 0,var(--wholesale-color) 4px,transparent 4px,transparent 8px);}
-  canvas{width:100%!important;}
-  /* SLOT TABLES */
-  .insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
-  .insight-panel{background:var(--paper);border:1px solid var(--border);padding:18px 20px;}
-  .insight-panel .ip-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-  .price-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed var(--border);font-size:.72rem;}
-  .price-row:last-child{border-bottom:none;}
-  .price-row .time{color:var(--muted);}
-  .price-badge{font-weight:600;font-size:.78rem;padding:1px 8px;}
-  .price-badge.neg{background:rgba(42,122,75,.15);color:var(--carbon-color);}
-  .price-badge.low{background:rgba(184,224,74,.2);color:#4a6818;}
-  .price-badge.mid{background:rgba(13,43,53,.08);color:var(--ink);}
-  .price-badge.high{background:rgba(13,43,53,.18);color:var(--ink);}
-  .loader-overlay{position:absolute;inset:0;background:rgba(240,244,242,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);gap:12px;z-index:10;}
-  .spin{width:28px;height:28px;border:2px solid var(--border);border-top-color:var(--lime);border-radius:50%;animation:spin .7s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .api-footer{border-top:1px solid var(--border);padding-top:16px;display:flex;gap:32px;flex-wrap:wrap;margin-top:28px;}
-  .api-source{flex:1;min-width:200px;}
-  .api-source .src-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;}
-  .api-source .src-url{font-size:.68rem;color:var(--ink);word-break:break-all;}
-  .api-source .src-url span{color:var(--carbon-color);}
-  .api-source .src-url span.ws{color:var(--wholesale-color);}
-  /* FOOTER */
-  .regen-footer{background:var(--ink);margin-left:-28px;margin-right:-28px;margin-bottom:-64px;padding:40px 28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;margin-top:48px;}
-  .footer-photo-wrap{flex-shrink:0;width:80px;height:80px;border-radius:50%;border:3px solid #FBFAF4;overflow:hidden;background:#FBFAF4;}
-  .footer-photo-wrap img{width:100%;height:100%;object-fit:cover;display:block;}
-  .footer-text{max-width:540px;}
-  .footer-text p{font-size:.78rem;color:rgba(255,255,255,.75);line-height:1.9;}
-  .footer-text a{color:var(--lime);text-decoration:none;}
-  .footer-text a:hover{text-decoration:underline;}
-  @media(max-width:600px){.insight-grid{grid-template-columns:1fr;}header{grid-template-columns:1fr;}.header-meta{text-align:left;}.control-divider{display:none;}.scatter-grid{grid-template-columns:1fr;}}
-</style>
-</head>
-<body>
-<div class="wrap">
+name: Fetch Wholesale Prices
 
-<header>
-  <div><div class="masthead">GB Grid<br><em>Price × Carbon</em></div></div>
-  <div class="header-meta">
-    <div class="live-indicator"><div class="live-dot"></div>Live</div>
-    <div class="header-date" id="header-date">—</div>
-    <svg class="regen-logo" viewBox="0 0 1000 195.13" xmlns="http://www.w3.org/2000/svg"><path fill="#fcfaf1" d="M965.42,193.82c-13.6,0-25.96-8-31.47-21.04l-58.72-139.15c-.32-.75-1.23-3.24-3.86-2.64-2.68.54-2.54,3.13-2.54,3.94v153.49h-31.04V34.93c0-16.55,11.33-30.41,27.55-33.69,16.23-3.24,32.05,5.07,38.5,20.32l58.72,139.15c.31.75,1.19,3.57,3.93,3.01,2.67-.54,2.48-3.48,2.48-4.3V6.63h31.04v152.79c0,16.55-11.33,30.41-27.55,33.69-2.36.47-4.71.71-7.02.71Z"/><path fill="#fcfaf1" d="M192.83,157.38h-51.59c-9.4,0-17.33-5.12-21.2-13.69-3.87-8.57-2.46-17.9,3.76-24.95l19.32-21.89c14.31-16.22,17.67-38.54,8.78-58.26-8.9-19.72-27.86-31.96-49.49-31.96H0v181.79h31.04V37.67h71.36c9.4,0,17.33,5.12,21.19,13.69,3.87,8.57,2.46,17.91-3.76,24.96l-19.32,21.89c-14.31,16.22-17.67,38.54-8.78,58.26,8.9,19.72,27.87,31.96,49.5,31.96h33.67l17.92-31.04Z"/><path fill="#fcfaf1" d="M490.12,113.04h73.81c-7.01,29.24-33.38,51.05-64.73,51.05-20.15,0-39-8.99-51.71-24.65-12.9-15.9-17.63-35.98-13.31-56.54,5.2-24.72,25.25-44.93,49.9-50.28,4.98-1.08,9.96-1.61,14.87-1.61,11.92,0,23.38,3.18,33.39,8.99l15.43-26.73c-20.67-12.01-45.47-16.38-70.29-10.99-36.4,7.91-66.01,37.73-73.69,74.22-6.19,29.46.94,59.53,19.58,82.49,18.64,22.97,46.27,36.13,75.82,36.13,53.81,0,97.6-43.78,97.6-97.6v-4.76c0-.28,0-.65,0-1.11v-9.64l-88.76-.02-17.92,31.04Z"/><polygon fill="#fcfaf1" points="260.93 113.04 330.24 113.04 330.24 82.01 260.93 82.01 260.93 37.67 349.56 37.67 349.56 6.63 229.89 6.63 229.89 188.42 349.56 188.42 349.56 157.38 260.93 157.38 260.93 113.04"/><polygon fill="#fcfaf1" points="688 113.04 757.3 113.04 757.3 82.01 688 82.01 688 37.67 776.63 37.67 776.63 6.63 656.96 6.63 656.96 188.42 776.63 188.42 776.63 157.38 688 157.38 688 113.04"/></svg>
-  </div>
-</header>
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # every 30 minutes
+  workflow_dispatch:           # manual trigger from Actions tab
 
-<div class="intro-block">
-  <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
-  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a region and time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale market index prices (Elexon BMRS) for comparison. Please be patient while data loads.</p>
-</div>
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
-<div class="controls">
-  <span class="control-label">Region</span>
-  <select id="region-select" onchange="loadData()">
-    <option value="ALL">── GB Total (all regions avg) ──</option>
-    <option value="A">Eastern England</option>
-    <option value="B">East Midlands</option>
-    <option value="C" selected>London</option>
-    <option value="D">Merseyside &amp; N Wales</option>
-    <option value="E">North Eastern England</option>
-    <option value="F">North Western England</option>
-    <option value="G">Northern Scotland</option>
-    <option value="H">Southern England</option>
-    <option value="J">South Eastern England</option>
-    <option value="K">Southern Wales</option>
-    <option value="L">South Western England</option>
-    <option value="M">Southern Scotland</option>
-    <option value="N">West Midlands</option>
-    <option value="P">Yorkshire</option>
-  </select>
-  <div class="control-divider"></div>
-  <span class="control-label">Period</span>
-  <select id="period-select" onchange="onPeriodChange()">
-    <option value="today">Last 24 hours</option>
-    <option value="month">Last 30 days</option>
-    <option value="year" selected>Last 12 months</option>
-    <option value="day">Specific day</option>
-  </select>
-  <input type="date" id="day-picker" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:var(--paper);border:1px solid var(--border);color:var(--ink);padding:8px 12px;outline:none;cursor:pointer;" onchange="loadData()">
-  <button class="refresh-btn" id="refresh-btn" onclick="loadData()">↻ Refresh</button>
-</div>
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-<div class="uk-total-note" id="uk-total-note">
-  <strong>GB Total</strong> — Agile prices averaged across all 14 DNO regions. Carbon and wholesale prices use the GB national average. Regional network charges vary; this is an indicative national mean.
-</div>
-<div class="progress-wrap" id="progress-wrap">
-  <div class="progress-label" id="progress-label">Fetching data…</div>
-  <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
-</div>
+      - name: Fetch 35 days of Elexon wholesale data
+        run: |
+          # 35 days back to cover the 30-day view plus buffer
+          FROM=$(date -u -d '35 days ago' '+%Y-%m-%dT%H:%M:%SZ')
+          TO=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+          echo "Fetching from $FROM to $TO"
 
-<div class="stat-strip">
-  <div class="stat-cell"><div class="s-label" id="sl-current">Current Agile Price</div><div class="s-value" id="stat-current-price" style="color:var(--price-color)">—</div><div class="s-unit">p / kWh inc. VAT</div><div class="s-timestamp" id="stat-current-timestamp"></div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-avg">Period Avg (Agile)</div><div class="s-value" id="stat-avg-price">—</div><div class="s-unit">p / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-ws">Wholesale Price</div><div class="s-value" id="stat-ws-price" style="color:var(--wholesale-color)">—</div><div class="s-unit">p / kWh (£/MWh ÷ 10)</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-carbon">Carbon Intensity</div><div class="s-value" id="stat-carbon" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-carbon">g CO₂eq / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-min">Period Min (Agile)</div><div class="s-value" id="stat-min-price" style="color:var(--carbon-color)">—</div><div class="s-unit">p / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-neg">Negative Slots</div><div class="s-value" id="stat-neg-slots" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-neg">half-hour periods</div></div>
-</div>
+          HTTP_STATUS=$(curl -s -o raw_wholesale.json -w "%{http_code}" \
+            "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=${FROM}&to=${TO}&format=json")
 
-<!-- ① SCATTER PLOTS SIDE BY SIDE -->
-<div class="section-label">Price–Carbon correlation</div>
-<div class="scatter-grid">
-  <!-- Agile scatter -->
-  <div>
-    <div class="scatter-wrap">
-      <div class="chart-header">
-        <div>
-          <div class="chart-title">Agile Price vs. Carbon — scatter</div>
-          <div class="chart-subtitle" id="scatter-subtitle-agile">Each dot = one 30-min slot</div>
-        </div>
-        <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:.6rem;color:var(--muted);padding:0 8px 10px;">
-        <span>cheap</span><div style="width:60px;height:7px;border-radius:3px;background:linear-gradient(to right,#FFE8DC,#FB5400)"></div><span>expensive</span>
-      </div>
-      <canvas id="scatter-chart-agile" height="260"></canvas>
-    </div>
-    <div class="corr-panel" id="corr-panel-agile">
-      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-agile">—</div><div class="c-desc">Agile price vs carbon</div></div>
-      <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-agile">—</div><div class="c-desc">Variance explained</div></div>
-      <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-agile">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
-      <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-agile">—</div><div class="c-desc" id="corr-interp-agile">—</div></div>
-    </div>
-  </div>
-  <!-- Wholesale scatter -->
-  <div>
-    <div class="scatter-wrap" style="border-top-color:var(--wholesale-color);">
-      <div class="chart-header">
-        <div>
-          <div class="chart-title" style="color:var(--wholesale-color)">Wholesale Price vs. Carbon — scatter</div>
-          <div class="chart-subtitle" id="scatter-subtitle-ws">Each dot = one 30-min slot</div>
-        </div>
-        <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;font-size:.6rem;color:var(--muted);padding:0 8px 10px;">
-        <span>cheap</span><div style="width:60px;height:7px;border-radius:3px;background:linear-gradient(to right,#ede9fe,#7c3aed)"></div><span>expensive</span>
-      </div>
-      <canvas id="scatter-chart-ws" height="260"></canvas>
-    </div>
-    <div class="corr-panel wholesale-panel" id="corr-panel-ws">
-      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-ws">—</div><div class="c-desc">Wholesale price vs carbon</div></div>
-      <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-ws">—</div><div class="c-desc">Variance explained</div></div>
-      <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-ws">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
-      <div class="corr-cell"><div class="c-label">Interpretation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-ws">—</div><div class="c-desc" id="corr-interp-ws">—</div></div>
-    </div>
-  </div>
-</div>
+          echo "HTTP status: $HTTP_STATUS"
 
-<!-- ② REGIONAL COMPARISON TABLE -->
-<div class="section-label" id="regional-section-label">Regional correlation comparison</div>
-<div class="regional-wrap" id="regional-wrap">
-  <div class="region-table-panel">
-    <div class="rt-title">
-      <span>Pearson's r — all 14 regions &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
-      <button onclick="sortRegionTable()" id="sort-btn">Sort by Agile r ↓</button>
-    </div>
-    <div id="region-table-loading" class="region-table-loading">
-      <div class="spin" style="margin:0 auto 10px;"></div>Fetching all regions…
-    </div>
-    <table class="rt-table" id="region-table" style="display:none">
-      <thead>
-        <tr>
-          <th>Region</th>
-          <th class="sortable" onclick="sortRegionTable()">Agile r</th>
-          <th>Agile R²</th>
-          <th>Agile strength</th>
-          <th class="col-divider"></th>
-          <th class="ws-col sortable" onclick="sortRegionTableWs()">Wholesale r</th>
-          <th class="ws-col">Wholesale R²</th>
-          <th class="ws-col">Wholesale strength</th>
-        </tr>
-      </thead>
-      <tbody id="region-table-body"></tbody>
-    </table>
-  </div>
-</div>
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "API returned $HTTP_STATUS — aborting"
+            exit 1
+          fi
 
-<!-- ③ MAIN TIME-SERIES CHART -->
-<div class="section-label">Time series</div>
-<div class="chart-wrap" id="main-chart-wrap">
-  <div class="loader-overlay" id="main-loader">
-    <div class="spin"></div>
-    <span id="loader-msg">Fetching live data…</span>
-  </div>
-  <div class="chart-header">
-    <div>
-      <div class="chart-title" id="chart-main-title">Electricity Price &amp; Carbon Intensity</div>
-      <div class="chart-subtitle" id="chart-main-subtitle">Last 12 months — weekly averages</div>
-    </div>
-    <div class="chart-legend">
-      <div class="legend-item"><div class="legend-line" style="background:var(--lime)"></div>Agile p/kWh</div>
-      <div class="legend-item"><div class="legend-dash"></div>Wholesale p/kWh</div>
-      <div class="legend-item"><div class="legend-line" style="background:var(--carbon-color)"></div>Carbon g/kWh</div>
-    </div>
-  </div>
-  <canvas id="main-chart" height="320"></canvas>
-</div>
+          # Check we got actual data
+          RECORD_COUNT=$(python3 -c "import json,sys; d=json.load(open('raw_wholesale.json')); print(len(d.get('data',[])))" 2>/dev/null || echo "0")
+          echo "Records fetched: $RECORD_COUNT"
 
-<!-- ④ SLOT TABLES -->
-<div class="insight-grid" id="slot-tables">
-  <div class="insight-panel">
-    <div class="ip-title" id="cheap-title">Cheapest slots</div>
-    <div id="cheapest-slots">—</div>
-  </div>
-  <div class="insight-panel">
-    <div class="ip-title" id="pricey-title">Priciest slots</div>
-    <div id="priciest-slots">—</div>
-  </div>
-</div>
+          if [ "$RECORD_COUNT" = "0" ]; then
+            echo "No records returned — aborting to preserve existing file"
+            exit 0
+          fi
 
-<div class="api-footer">
-  <div class="api-source"><div class="src-label">Agile retail price</div><div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/…/standard-unit-rates/ — half-hourly p/kWh inc. VAT</div></div>
-  <div class="api-source"><div class="src-label">Wholesale market price</div><div class="src-url"><span class="ws">GET</span> wholesale.json (in repo root) — pre-fetched every 30 min by GitHub Actions from Elexon BMRS Market Index Price. GB-wide, £/MWh averaged across providers, converted to p/kWh.</div></div>
-  <div class="api-source"><div class="src-label">Carbon intensity</div><div class="src-url"><span>GET</span> api.carbonintensity.org.uk — half-hourly g CO₂eq/kWh</div></div>
-  <div class="api-source"><div class="src-label">Statistics</div><div class="src-url" style="color:var(--muted)">Pearson's r, R², OLS and p-value computed client-side from matched half-hourly slots.</div></div>
-</div>
+          # Process: average across data providers per settlement period,
+          # convert £/MWh → p/kWh (÷10), output clean array
+          python3 << 'PYEOF'
+import json, sys
+from collections import defaultdict
 
-</div><!-- /wrap -->
-<div class="regen-footer">
-  <div class="footer-photo-wrap">
-    <img src="data:image/jpeg;base64,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" alt="Tamsyn Lonsdale-Smith">
-  </div>
-  <div class="footer-text">
-    <p>Developed by <strong style="color:#fff;">Tamsyn Lonsdale-Smith</strong> for Regen.<br>For any questions on this price and carbon intensity tracker, contact <a href="mailto:tlonsdalesmith@regen.co.uk">tlonsdalesmith@regen.co.uk</a></p>
-  </div>
-</div>
+with open('raw_wholesale.json') as f:
+    raw = json.load(f)
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script>
-'use strict';
-let mainChart=null,scatterAgile=null,scatterWs=null;
-let regionTableData=[];
-let regionTableSortAgile=true,regionTableSortAsc=false;
-const ALL_REGIONS=['A','B','C','D','E','F','G','H','J','K','L','M','N','P'];
-const REGION_NAMES={A:'Eastern England',B:'East Midlands',C:'London',D:'Merseyside & N Wales',E:'North Eastern England',F:'North Western England',G:'Northern Scotland',H:'Southern England',J:'South Eastern England',K:'Southern Wales',L:'South Western England',M:'Southern Scotland',N:'West Midlands',P:'Yorkshire'};
+data = raw.get('data', [])
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-const todayUK=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Europe/London'});
-const dateNDaysAgo=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toLocaleDateString('en-CA',{timeZone:'Europe/London'});};
-const formatTime=iso=>new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});
-const formatDate=iso=>new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'});
-const priceBadgeClass=p=>p<0?'neg':p<10?'low':p<25?'mid':'high';
+# Group by startTime, average marketIndexPrice across providers
+by_slot = defaultdict(list)
+for row in data:
+    price = row.get('marketIndexPrice')
+    start = row.get('startTime')
+    if price is not None and start is not None:
+        by_slot[start].append(float(price))
 
-function setProgress(pct,label){
-  const w=document.getElementById('progress-wrap');
-  w.classList.toggle('visible',pct<100);
-  document.getElementById('progress-bar').style.width=pct+'%';
-  if(label)document.getElementById('progress-label').textContent=label;
-}
-function setLoader(show,msg){
-  document.getElementById('main-loader').style.display=show?'flex':'none';
-  if(msg)document.getElementById('loader-msg').textContent=msg;
-  document.getElementById('refresh-btn').disabled=show;
+# Build output list sorted by time, price in p/kWh
+output = []
+for start_time, prices in sorted(by_slot.items()):
+    avg_mwh = sum(prices) / len(prices)
+    output.append({
+        "startTime": start_time,
+        "price_pence": round(avg_mwh / 10, 4)   # £/MWh → p/kWh
+    })
+
+result = {
+    "fetched_at": __import__('datetime').datetime.utcnow().isoformat() + 'Z',
+    "record_count": len(output),
+    "unit": "p/kWh",
+    "source": "Elexon BMRS Market Index Price (avg across providers, converted from £/MWh)",
+    "data": output
 }
 
-// ── STATISTICS ────────────────────────────────────────────────────────────────
-function lgamma(z){
-  const g=7,c=[.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];
-  if(z<.5)return Math.log(Math.PI/Math.sin(Math.PI*z))-lgamma(1-z);
-  z-=1;let a=c[0];const t2=z+g+.5;
-  for(let i=1;i<g+2;i++)a+=c[i]/(z+i);
-  return .5*Math.log(2*Math.PI)+(z+.5)*Math.log(t2)-t2+Math.log(a);
-}
-function ibeta(x,a,b){
-  if(x<=0)return 0;if(x>=1)return 1;
-  const lbeta=lgamma(a)+lgamma(b)-lgamma(a+b);
-  const front=Math.exp(a*Math.log(x)+b*Math.log(1-x)-lbeta)/a;
-  let c=1,d=1/(1-(a+b)*x/(a+1)),h=d;
-  for(let m=1;m<200;m++){
-    let aa=m*(b-m)*x/((a+2*m-1)*(a+2*m));
-    d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;d=1/d;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;h*=d*c;
-    aa=-(a+m)*(a+b+m)*x/((a+2*m)*(a+2*m+1));
-    d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;d=1/d;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;
-    const del=d*c;h*=del;if(Math.abs(del-1)<1e-10)break;
-  }
-  return front*h;
-}
-function computeStats(xs,ys){
-  const n=xs.length;if(n<4)return null;
-  const mx=xs.reduce((a,b)=>a+b,0)/n,my=ys.reduce((a,b)=>a+b,0)/n;
-  let num=0,dx2=0,dy2=0;
-  for(let i=0;i<n;i++){const dx=xs[i]-mx,dy=ys[i]-my;num+=dx*dy;dx2+=dx*dx;dy2+=dy*dy;}
-  const r=num/Math.sqrt(dx2*dy2+1e-12);
-  const r2=r*r,slope=num/(dx2+1e-12),intercept=my-slope*mx;
-  const df=n-2,t=r*Math.sqrt(df/(1-r2+1e-12));
-  const xb=df/(df+t*t),pval=2*ibeta(xb,df/2,.5);
-  return{r,r2,slope,intercept,pval,n};
-}
-function strengthLabel(r){
-  const a=Math.abs(r);
-  if(a>=.7)return{text:r>0?'Strong positive':'Strong negative',cls:'strong'};
-  if(a>=.4)return{text:r>0?'Moderate positive':'Moderate negative',cls:'moderate'};
-  if(a>=.2)return{text:r>0?'Weak positive':'Weak negative',cls:'weak'};
-  return{text:'No clear relationship',cls:'none'};
-}
-function formatP(p){return p<.001?'< 0.001':p.toFixed(3);}
+with open('wholesale.json', 'w') as f:
+    json.dump(result, f, separators=(',', ':'))
 
-function updateCorrPanel(stats,suffix,accentColor){
-  accentColor=accentColor||'var(--carbon-color)';
-  if(!stats){
-    ['corr-r','corr-r2','corr-p','corr-strength'].forEach(id=>document.getElementById(id+'-'+suffix).textContent='—');
-    document.getElementById('corr-interp-'+suffix).textContent='Insufficient data';
-    return;
-  }
-  const{r,r2,slope,pval,n}=stats;
-  const rEl=document.getElementById('corr-r-'+suffix);
-  rEl.textContent=r.toFixed(3);
-  document.getElementById('corr-r2-'+suffix).textContent=r2.toFixed(3);
-  document.getElementById('corr-p-'+suffix).textContent=formatP(pval);
-  const str=strengthLabel(r);
-  document.getElementById('corr-strength-'+suffix).innerHTML=`<span class="strength-pill ${str.cls}">${str.text}</span>`;
-  const rColor=Math.abs(r)>=.7?accentColor:Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)';
-  rEl.style.color=rColor;
-  const sig=pval<.05,pct=(r2*100).toFixed(1);
-  document.getElementById('corr-interp-'+suffix).textContent=sig
-    ?`Significant (p${pval<.001?' < 0.001':' = '+pval.toFixed(3)}). Explains ${pct}% of price variance.`
-    :`Not significant at p < 0.05. Explains only ${pct}%.`;
-}
+print(f"Written {len(output)} slots to wholesale.json")
+PYEOF
 
-// ── REGIONAL TABLE ────────────────────────────────────────────────────────────
-function renderRegionTable(data){
-  const tbody=document.getElementById('region-table-body');
-  let sorted=[...data];
-  if(regionTableSortAgile){
-    sorted.sort((a,b)=>regionTableSortAsc?(a.r??-99)-(b.r??-99):(b.r??-99)-(a.r??-99));
-  } else {
-    sorted.sort((a,b)=>regionTableSortAsc?(a.rWs??-99)-(b.rWs??-99):(b.rWs??-99)-(a.rWs??-99));
-  }
-  const isSelected=code=>document.getElementById('region-select').value===code;
-  function rCell(r,r2,useWs){
-    const rVal=r!==null?r.toFixed(3):'—';
-    const r2Val=r2!==null?r2.toFixed(3):'—';
-    const barW=r!==null?Math.round(Math.max(0,r)*100):0;
-    const str=r!==null?strengthLabel(r):{text:'—',cls:'none'};
-    const color=r!==null?(Math.abs(r)>=.7?(useWs?'var(--wholesale-color)':'var(--carbon-color)'):Math.abs(r)>=.4?'var(--lime-dark)':'var(--ink)'):'var(--muted)';
-    const barColor=useWs?(r!==null?'var(--wholesale-color)':'transparent'):'var(--carbon-color)';
-    return `<td><span class="r-val" style="color:${color}">${rVal}</span><span class="r-bar-wrap"><span class="r-bar" style="width:${barW}%;background:${barColor}"></span></span></td>
-            <td style="color:var(--muted)">${r2Val}</td>
-            <td><span class="strength-pill ${str.cls}" style="font-size:.57rem;padding:1px 5px">${str.text}</span></td>`;
-  }
-  tbody.innerHTML=sorted.map(row=>`<tr style="${isSelected(row.code)?'background:rgba(184,224,74,.1)':''}">
-    <td>${row.name}${isSelected(row.code)?' ◀':''}</td>
-    ${rCell(row.r,row.r2,false)}
-    <td class="col-divider"></td>
-    ${rCell(row.rWs,row.r2Ws,true)}
-  </tr>`).join('');
-  document.getElementById('region-table').style.display='table';
-  document.getElementById('region-table-loading').style.display='none';
-  const asc=regionTableSortAsc?'↑':'↓';
-  document.getElementById('sort-btn').textContent=regionTableSortAgile?`Sort by Agile r ${asc}`:`Sort by Wholesale r ${asc}`;
-}
-function sortRegionTable(){regionTableSortAgile=true;regionTableSortAsc=!regionTableSortAsc;renderRegionTable(regionTableData);}
-function sortRegionTableWs(){regionTableSortAgile=false;regionTableSortAsc=!regionTableSortAsc;renderRegionTable(regionTableData);}
-
-// ── API FETCHERS ──────────────────────────────────────────────────────────────
-async function fetchAgilePage(region,fromISO,toISO,page){
-  const tariff=`E-1R-AGILE-24-10-01-${region}`;
-  let url=`https://api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/${tariff}/standard-unit-rates/?period_from=${fromISO}&period_to=${toISO}&page_size=1500&order_by=period`;
-  if(page>1)url+=`&page=${page}`;
-  const r=await fetch(url);if(!r.ok)throw new Error(`Agile API ${r.status}`);
-  return r.json();
-}
-async function fetchAgileRange(region,fromISO,toISO,onProgress){
-  let all=[],page=1,total=null;
-  do{
-    const j=await fetchAgilePage(region,fromISO,toISO,page);
-    if(total===null)total=j.count||0;
-    all=all.concat(j.results||[]);
-    if(onProgress)onProgress(all.length,total);
-    page++;if(!j.next)break;
-  }while(true);
-  return all.sort((a,b)=>new Date(a.valid_from)-new Date(b.valid_from));
-}
-async function fetchAgileNational(fromISO,toISO,onProgress){
-  let done=0;
-  const all=await Promise.all(ALL_REGIONS.map(r=>fetchAgileRange(r,fromISO,toISO).then(d=>{done++;if(onProgress)onProgress(done,ALL_REGIONS.length);return d;}).catch(()=>[])));
-  const slotMap={};
-  all.forEach(rd=>rd.forEach(s=>{if(!slotMap[s.valid_from])slotMap[s.valid_from]={valid_from:s.valid_from,valid_to:s.valid_to,prices:[]};slotMap[s.valid_from].prices.push(s.value_inc_vat);}));
-  return Object.values(slotMap).filter(s=>s.prices.length>=10).map(s=>({valid_from:s.valid_from,valid_to:s.valid_to,value_inc_vat:s.prices.reduce((a,b)=>a+b,0)/s.prices.length})).sort((a,b)=>new Date(a.valid_from)-new Date(b.valid_from));
-}
-
-// Elexon wholesale market index — returns p/kWh (converted from £/MWh ÷ 10)
-// Averages across all data providers per settlement period
-// Wholesale data pre-fetched server-side by GitHub Actions every 30 min
-// stored in wholesale.json in the repo root. No CORS issues.
-// File covers last 35 days; we filter to the requested range here.
-let _wholesaleCache=null,_wholesaleCacheTime=0;
-async function fetchWholesale(fromISO,toISO){
-  try{
-    const now=Date.now();
-    if(!_wholesaleCache||now-_wholesaleCacheTime>5*60*1000){
-      const r=await fetch('./wholesale.json?t='+Math.floor(now/60000));
-      if(!r.ok){console.warn('wholesale.json not found — run GitHub Action first');return[];}
-      const j=await r.json();
-      _wholesaleCache=(j.data||[]).map(d=>({startTime:d.startTime,price:d.price_pence}));
-      _wholesaleCacheTime=now;
-      console.log('Wholesale cache: '+_wholesaleCache.length+' slots, fetched '+j.fetched_at);
-    }
-    const from=new Date(fromISO),to=new Date(toISO);
-    return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
-  }catch(e){console.warn('Wholesale fetch failed:',e);return[];}
-}
-
-async function fetchCarbonDate(d){const r=await fetch(`https://api.carbonintensity.org.uk/intensity/date/${d}`);if(!r.ok)return[];const j=await r.json();return j.data||[];}
-async function fetchCarbonRange(f,t){const r=await fetch(`https://api.carbonintensity.org.uk/intensity/${f}/${t}`);if(!r.ok)return[];const j=await r.json();return j.data||[];}
-async function fetchCurrentIntensity(){const r=await fetch('https://api.carbonintensity.org.uk/intensity');const j=await r.json();return j.data?.[0]?.intensity||{};}
-
-// Build a map from half-hour ISO key → wholesale price (p/kWh)
-function buildWholesaleMap(wholesaleData){
-  const m={};
-  wholesaleData.forEach(d=>{
-    const t=new Date(d.startTime);
-    t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-    // Average if multiple entries round to same slot
-    const k=t.toISOString();
-    if(!m[k])m[k]=[];m[k].push(d.price);
-  });
-  return Object.fromEntries(Object.entries(m).map(([k,vs])=>[k,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-
-// ── AGGREGATION ───────────────────────────────────────────────────────────────
-function aggregateByDay(agile){
-  const byDay={};
-  agile.forEach(d=>{const day=new Date(d.valid_from).toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byDay[day])byDay[day]=[];byDay[day].push(d.value_inc_vat);});
-  return Object.entries(byDay).sort(([a],[b])=>a.localeCompare(b)).map(([day,vals])=>({date:day,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
-}
-function aggregateByWeek(agile){
-  const byWeek={};
-  agile.forEach(d=>{const dt=new Date(d.valid_from),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byWeek[k])byWeek[k]=[];byWeek[k].push(d.value_inc_vat);});
-  return Object.entries(byWeek).sort(([a],[b])=>a.localeCompare(b)).map(([w,vals])=>({date:w,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
-}
-function aggregateWsByDay(wsData){
-  const byDay={};
-  wsData.forEach(d=>{const day=new Date(d.startTime).toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byDay[day])byDay[day]=[];byDay[day].push(d.price);});
-  return Object.fromEntries(Object.entries(byDay).map(([day,vs])=>[day,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-function aggregateWsByWeek(wsData){
-  const byWeek={};
-  wsData.forEach(d=>{const dt=new Date(d.startTime),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!byWeek[k])byWeek[k]=[];byWeek[k].push(d.price);});
-  return Object.fromEntries(Object.entries(byWeek).map(([w,vs])=>[w,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-function carbonByDay(carbon){
-  const m={};
-  carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const day=new Date(d.from).toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!m[day])m[day]=[];m[day].push(v);});
-  return Object.fromEntries(Object.entries(m).map(([d,vs])=>[d,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-function carbonByWeek(carbon){
-  const m={};
-  carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const dt=new Date(d.from),day=dt.getDay(),mon=new Date(dt);mon.setDate(dt.getDate()-(day===0?6:day-1));const k=mon.toLocaleDateString('en-CA',{timeZone:'Europe/London'});if(!m[k])m[k]=[];m[k].push(v);});
-  return Object.fromEntries(Object.entries(m).map(([w,vs])=>[w,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-function aggregateByHour(agile){
-  const byHour={};
-  agile.forEach(d=>{const k=new Date(d.valid_from).toISOString().slice(0,13);if(!byHour[k])byHour[k]=[];byHour[k].push(d.value_inc_vat);});
-  return Object.entries(byHour).sort(([a],[b])=>a.localeCompare(b)).map(([hour,vals])=>({hour,avg:vals.reduce((s,v)=>s+v,0)/vals.length,min:Math.min(...vals),max:Math.max(...vals),neg:vals.filter(v=>v<0).length}));
-}
-function carbonByHour(carbon){
-  const m={};
-  carbon.forEach(d=>{const v=d.intensity?.actual??d.intensity?.forecast??null;if(v===null)return;const k=new Date(d.from).toISOString().slice(0,13);if(!m[k])m[k]=[];m[k].push(v);});
-  return Object.fromEntries(Object.entries(m).map(([h,vs])=>[h,vs.reduce((a,b)=>a+b,0)/vs.length]));
-}
-function formatHourLabel(h){const d=new Date(h+':00:00Z');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'});}
-
-// ── SCATTER BUILDERS ──────────────────────────────────────────────────────────
-function buildScatterAgile(agile,carbon){
-  const cm={};
-  carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-  const pts=[];
-  agile.forEach(d=>{const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);const c=cm[t.toISOString()];if(c!=null)pts.push({x:c,y:parseFloat(d.value_inc_vat.toFixed(2))});});
-  const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
-  updateCorrPanel(stats,'agile','var(--carbon-color)');
-  const trendDs=[];
-  if(stats&&pts.length){const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x));trendDs.push({label:'OLS trendline',data:[{x:minX,y:stats.slope*minX+stats.intercept},{x:maxX,y:stats.slope*maxX+stats.intercept}],type:'line',borderColor:'rgba(13,43,53,.6)',borderWidth:2,borderDash:[5,3],pointRadius:0,fill:false,tension:0});}
-  const sample=pts.length>1000?pts.filter((_,i)=>i%Math.ceil(pts.length/1000)===0):pts;
-  const allP=sample.map(p=>p.y),minP=Math.min(...allP),maxP=Math.max(...allP);
-  function agileColor(p){const t=Math.max(0,Math.min(1,(p-minP)/(maxP-minP||1)));return`rgba(${Math.round(255+(251-255)*t)},${Math.round(232+(84-232)*t)},${Math.round(220+(0-220)*t)},0.85)`;}
-  const ctx=document.getElementById('scatter-chart-agile').getContext('2d');
-  if(scatterAgile)scatterAgile.destroy();
-  scatterAgile=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'Agile vs Carbon',data:sample,backgroundColor:sample.map(p=>agileColor(p.y)),pointRadius:3,pointHoverRadius:5},...trendDs]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:10},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x}g CO₂  →  ${ctx.parsed.y}p`:` Trend: ${ctx.parsed.y.toFixed(1)}p`}}},scales:{x:{title:{display:true,text:'Carbon (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Agile (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}}}}});
-  return stats;
-}
-
-function buildScatterWs(wsData,carbon){
-  const cm={};
-  carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-  const wsMap=buildWholesaleMap(wsData);
-  const pts=[];
-  Object.entries(wsMap).forEach(([k,price])=>{const c=cm[k];if(c!=null)pts.push({x:c,y:parseFloat(price.toFixed(2))});});
-  const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
-  updateCorrPanel(stats,'ws','var(--wholesale-color)');
-  const trendDs=[];
-  if(stats&&pts.length){const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x));trendDs.push({label:'OLS trendline',data:[{x:minX,y:stats.slope*minX+stats.intercept},{x:maxX,y:stats.slope*maxX+stats.intercept}],type:'line',borderColor:'rgba(124,58,237,.6)',borderWidth:2,borderDash:[5,3],pointRadius:0,fill:false,tension:0});}
-  const sample=pts.length>1000?pts.filter((_,i)=>i%Math.ceil(pts.length/1000)===0):pts;
-  const allP=sample.map(p=>p.y),minP=Math.min(...allP),maxP=Math.max(...allP);
-  function wsColor(p){const t=Math.max(0,Math.min(1,(p-minP)/(maxP-minP||1)));return`rgba(${Math.round(237+(124-237)*t)},${Math.round(233+(58-233)*t)},${Math.round(254+(237-254)*t)},0.9)`;}
-  const ctx=document.getElementById('scatter-chart-ws').getContext('2d');
-  if(scatterWs)scatterWs.destroy();
-  scatterWs=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'Wholesale vs Carbon',data:sample,backgroundColor:sample.map(p=>wsColor(p.y)),pointRadius:3,pointHoverRadius:5},...trendDs]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:10},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x}g CO₂  →  ${ctx.parsed.y.toFixed(2)}p`:` Trend: ${ctx.parsed.y.toFixed(1)}p`}}},scales:{x:{title:{display:true,text:'Carbon (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Wholesale (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#7c3aed'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}}}}});
-  return stats;
-}
-
-// ── MAIN CHART ────────────────────────────────────────────────────────────────
-function buildMainChart(labels,priceData,wsData,carbonData,isAgg){
-  const ctx=document.getElementById('main-chart').getContext('2d');
-  if(mainChart)mainChart.destroy();
-  const agileColors=priceData.map(p=>!p&&p!==0?'transparent':p<0?'rgba(42,122,75,.85)':p<10?'rgba(184,224,74,.8)':p<20?'rgba(184,224,74,.5)':p<30?'rgba(13,43,53,.5)':'rgba(13,43,53,.8)');
-  mainChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[
-    {label:'Agile Price (p/kWh)',data:priceData,backgroundColor:agileColors,borderColor:agileColors,borderWidth:0,yAxisID:'yPrice',order:3,barPercentage:isAgg?.6:.8,categoryPercentage:.85},
-    {label:'Wholesale Price (p/kWh)',data:wsData,type:'line',borderColor:'rgba(124,58,237,.8)',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,yAxisID:'yPrice',order:2,spanGaps:true},
-    {label:'Carbon Intensity (g CO₂/kWh)',data:carbonData,type:'line',borderColor:'rgba(42,122,75,.9)',backgroundColor:'rgba(42,122,75,.05)',borderWidth:2,pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,fill:true,yAxisID:'yCarbon',order:1,spanGaps:true}
-  ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11},padding:10,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Agile')&&ctx.parsed.y!=null)return` ${isAgg?'Avg ':''}Agile: ${ctx.parsed.y.toFixed(2)}p/kWh`;if(ctx.dataset.label.includes('Wholesale')&&ctx.parsed.y!=null)return` ${isAgg?'Avg ':''}Wholesale: ${ctx.parsed.y.toFixed(2)}p/kWh`;if(ctx.dataset.label.includes('Carbon')&&ctx.parsed.y!=null)return` Carbon: ${ctx.parsed.y.toFixed(0)} g CO₂/kWh`;return null;}}}},scales:{x:{ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',maxTicksLimit:14,maxRotation:0},grid:{display:false},border:{color:'#c8d8d0'}},yPrice:{position:'left',title:{display:true,text:'p/kWh',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#0d2b35',callback:v=>v.toFixed(0)+'p'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}},yCarbon:{position:'right',title:{display:true,text:'g CO₂/kWh',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},grid:{display:false},border:{color:'#c8d8d0'}}}}});
-}
-
-function buildSlotTables(agile){
-  const sorted=[...agile].sort((a,b)=>a.value_inc_vat-b.value_inc_vat);
-  const row=d=>`<div class="price-row"><span class="time">${formatTime(d.valid_from)} – ${formatTime(d.valid_to)}</span><span class="price-badge ${priceBadgeClass(d.value_inc_vat)}">${d.value_inc_vat.toFixed(1)}p</span></div>`;
-  document.getElementById('cheapest-slots').innerHTML=sorted.slice(0,5).map(row).join('');
-  document.getElementById('priciest-slots').innerHTML=sorted.slice(-5).reverse().map(row).join('');
-}
-function buildAggSlotTables(agg,label){
-  const sorted=[...agg].sort((a,b)=>a.avg-b.avg);
-  const formatLabel=label==='hour'?d=>formatHourLabel(d.hour):d=>d.date;
-  const row=d=>`<div class="price-row"><span class="time">${formatLabel(d)}</span><span class="price-badge ${priceBadgeClass(d.avg)}">${d.avg.toFixed(1)}p avg</span></div>`;
-  document.getElementById('cheap-title').textContent=`Cheapest ${label}s (Agile)`;
-  document.getElementById('pricey-title').textContent=`Priciest ${label}s (Agile)`;
-  document.getElementById('cheapest-slots').innerHTML=sorted.slice(0,5).map(row).join('');
-  document.getElementById('priciest-slots').innerHTML=sorted.slice(-5).reverse().map(row).join('');
-}
-
-// ── STATS STRIP ───────────────────────────────────────────────────────────────
-function setStatLabels(todayMode){
-  document.getElementById('sl-current').textContent=todayMode?'Current Agile Price':'Latest Agile Price';
-  document.getElementById('sl-avg').textContent=todayMode?"Today's Avg (Agile)":'Period Avg (Agile)';
-  document.getElementById('sl-min').textContent='Period Min (Agile)';
-  document.getElementById('sl-carbon').textContent=todayMode?'Carbon Now':'Avg Carbon';
-  document.getElementById('su-carbon').textContent=todayMode?'g CO₂eq / kWh':'g CO₂eq / kWh (avg)';
-  document.getElementById('sl-ws').textContent=todayMode?'Current Wholesale':'Period Avg Wholesale';
-}
-function fillStats(agile,wsData,carbonVal){
-  const now=new Date();
-  const prices=agile.map(d=>d.value_inc_vat);
-  const avg=prices.reduce((a,b)=>a+b,0)/prices.length;
-  const current=agile.find(d=>new Date(d.valid_from)<=now&&new Date(d.valid_to)>now)||agile[agile.length-1];
-  document.getElementById('stat-current-price').textContent=current?current.value_inc_vat.toFixed(1):'—';
-  const tsEl=document.getElementById('stat-current-timestamp');
-  if(tsEl&&current)tsEl.textContent=formatTime(current.valid_from)+' – '+formatTime(current.valid_to);
-  document.getElementById('stat-avg-price').textContent=avg.toFixed(1);
-  document.getElementById('stat-min-price').textContent=Math.min(...prices).toFixed(1);
-  document.getElementById('stat-carbon').textContent=carbonVal!==null&&carbonVal!==undefined?typeof carbonVal==='object'?(carbonVal.actual??carbonVal.forecast??'—'):carbonVal.toFixed(0):'—';
-  document.getElementById('stat-neg-slots').textContent=prices.filter(p=>p<0).length;
-  // Wholesale current/avg
-  if(wsData&&wsData.length){
-    const wsMap=buildWholesaleMap(wsData);
-    const wsVals=Object.values(wsMap);
-    const wsAvg=wsVals.length?wsVals.reduce((a,b)=>a+b,0)/wsVals.length:null;
-    // Find current slot in wholesale
-    let wsCurrent=null;
-    if(current){
-      const t=new Date(current.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-      wsCurrent=wsMap[t.toISOString()]??wsAvg;
-    }
-    document.getElementById('stat-ws-price').textContent=(wsCurrent??wsAvg)!==null?((wsCurrent??wsAvg)).toFixed(1):'—';
-  } else {
-    document.getElementById('stat-ws-price').textContent='—';
-  }
-}
-
-// ── REGIONAL TABLE WITH WHOLESALE ────────────────────────────────────────────
-async function fetchRegionCorr(code,fromISO,toISO,carbonRaw,wsData){
-  try{
-    const agile=await fetchAgileRange(code,fromISO,toISO);
-    const carbonMap={};
-    carbonRaw.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);carbonMap[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-    const wsMap=buildWholesaleMap(wsData||[]);
-    const xsA=[],ysA=[],xsW=[],ysW=[];
-    agile.forEach(d=>{
-      const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-      const k=t.toISOString(),c=carbonMap[k];
-      if(c!=null){xsA.push(c);ysA.push(d.value_inc_vat);}
-    });
-    Object.entries(wsMap).forEach(([k,price])=>{const c=carbonMap[k];if(c!=null){xsW.push(c);ysW.push(price);}});
-    const sA=computeStats(xsA,ysA),sW=computeStats(xsW,ysW);
-    return{code,name:REGION_NAMES[code],r:sA?sA.r:null,r2:sA?sA.r2:null,rWs:sW?sW.r:null,r2Ws:sW?sW.r2:null};
-  }catch(e){return{code,name:REGION_NAMES[code],r:null,r2:null,rWs:null,r2Ws:null};}
-}
-async function buildRegionalTable(fromISO,toISO,carbonRaw,wsData){
-  document.getElementById('region-table-loading').style.display='block';
-  document.getElementById('region-table').style.display='none';
-  const results=await Promise.all(ALL_REGIONS.map(code=>fetchRegionCorr(code,fromISO,toISO,carbonRaw,wsData)));
-  regionTableData=results;
-  renderRegionTable(results);
-}
-
-// ── MAIN LOAD ─────────────────────────────────────────────────────────────────
-function onPeriodChange(){
-  const period=document.getElementById('period-select').value;
-  const picker=document.getElementById('day-picker');
-  picker.style.display=period==='day'?'inline-block':'none';
-  if(period==='day'&&!picker.value)picker.value=dateNDaysAgo(1);
-  loadData();
-}
-async function loadData(){
-  const region=document.getElementById('region-select').value;
-  const period=document.getElementById('period-select').value;
-  const isNat=region==='ALL';
-  document.getElementById('uk-total-note').classList.toggle('visible',isNat);
-  setLoader(true,'Fetching live data…');setProgress(0);
-  document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Europe/London'});
-  try{
-    if(period==='today')await loadToday(region,isNat);
-    else if(period==='month')await loadMonth(region,isNat);
-    else if(period==='day'){const picked=document.getElementById('day-picker').value;if(picked)await loadSpecificDay(region,isNat,picked);else{setLoader(false);return;}}
-    else await loadYear(region,isNat);
-  }catch(err){document.getElementById('main-loader').style.display='flex';document.getElementById('loader-msg').textContent='⚠ '+err.message;console.error(err);}
-  setProgress(100);setLoader(false);
-}
-
-// ── LAST 24 HOURS ─────────────────────────────────────────────────────────────
-async function loadToday(region,isNat){
-  const now=new Date();
-  const from24=new Date(now.getTime()-24*60*60*1000);
-  const fromISO=from24.toISOString().replace(/\.\d{3}Z$/,'Z');
-  const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
-  let agile;
-  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*40),`Regions ${_d}/${t}…`));}
-  else agile=await fetchAgileRange(region,fromISO,toISO);
-  const todayStr=todayUK(),yesterdayStr=dateNDaysAgo(1);
-  const[carbonToday,carbonYesterday,carbonNow,wsData]=await Promise.all([fetchCarbonDate(todayStr),fetchCarbonDate(yesterdayStr),fetchCurrentIntensity(),fetchWholesale(fromISO,toISO)]);
-  const carbon=[...carbonYesterday,...carbonToday];
-  if(!agile.length)throw new Error("No Agile data for the last 24 hours.");
-  const agile24=agile.filter(d=>new Date(d.valid_from)>=from24);
-  const cm={};carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-  const wsMap=buildWholesaleMap(wsData);
-  const labels=[],pd=[],wsd=[],cd=[];
-  (agile24.length?agile24:agile).forEach(d=>{
-    labels.push(formatTime(d.valid_from));pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
-    const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-    cd.push(cm[t.toISOString()]??null);wsd.push(wsMap[t.toISOString()]??null);
-  });
-  const used=agile24.length?agile24:agile;
-  document.getElementById('chart-main-title').textContent='Electricity Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Last 24 hours — 30-min slots${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots, last 24h${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots, last 24h (wholesale)`;
-  document.getElementById('cheap-title').textContent='Cheapest Agile slots — last 24h';
-  document.getElementById('pricey-title').textContent='Priciest Agile slots — last 24h';
-  setStatLabels(true);fillStats(used,wsData,carbonNow);
-  buildScatterAgile(used,carbon);buildScatterWs(wsData,carbon);
-  buildMainChart(labels,pd,wsd,cd,false);
-  buildSlotTables(used);
-  buildRegionalTable(fromISO,toISO,carbon,wsData).catch(()=>{});
-}
-
-// ── LAST 30 DAYS ──────────────────────────────────────────────────────────────
-async function loadMonth(region,isNat){
-  const now=new Date();
-  const from30=new Date(now.getTime()-30*24*60*60*1000);
-  const fromISO=from30.toISOString().replace(/\.\d{3}Z$/,'Z');
-  const toISO=now.toISOString().replace(/\.\d{3}Z$/,'Z');
-  setProgress(10,isNat?'Fetching all 14 regions…':'Fetching 30 days…');
-  let agileRaw;
-  if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*40),`Regions ${_d}/${t}…`));
-  else agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*40),`Prices ${_d}/${t}`));
-  setProgress(55,'Fetching carbon & wholesale…');
-  const midDate=dateNDaysAgo(15);
-  const[c1,c2,wsData]=await Promise.all([fetchCarbonRange(fromISO,`${midDate}T00:00Z`),fetchCarbonRange(`${midDate}T00:00Z`,toISO),fetchWholesale(fromISO,toISO)]);
-  const carbonRaw=[...c1,...c2];
-  setProgress(80,'Aggregating…');
-  const aByD=aggregateByDay(agileRaw),cByD=carbonByDay(carbonRaw),wsByD=aggregateWsByDay(wsData);
-  const labels=aByD.map(d=>formatDate(d.date+'T12:00:00'));
-  const pd=aByD.map(d=>parseFloat(d.avg.toFixed(2)));
-  const wsd=aByD.map(d=>{const v=wsByD[d.date];return v!==undefined?parseFloat(v.toFixed(2)):null;});
-  const cd=aByD.map(d=>{const v=cByD[d.date];return v!==undefined?parseFloat(v.toFixed(0)):null;});
-  const cAvg=Object.values(cByD).length?Object.values(cByD).reduce((a,b)=>a+b,0)/Object.values(cByD).length:null;
-  document.getElementById('chart-main-title').textContent='Daily Average Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Last 30 days — daily averages${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots, last 30 days${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots, last 30 days (wholesale)`;
-  setStatLabels(false);fillStats(agileRaw,wsData,cAvg);
-  buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsData,carbonRaw);
-  buildMainChart(labels,pd,wsd,cd,true);
-  buildAggSlotTables(aByD,'day');
-  buildRegionalTable(fromISO,toISO,carbonRaw,wsData).catch(()=>{});
-  setProgress(100);
-}
-
-// ── SPECIFIC DAY ──────────────────────────────────────────────────────────────
-async function loadSpecificDay(region,isNat,dateStr){
-  const fromISO=`${dateStr}T00:00Z`;
-  const nextDay=new Date(dateStr+'T00:00Z');nextDay.setDate(nextDay.getDate()+1);
-  const toISO=nextDay.toISOString().replace(/\.\d{3}Z$/,'Z');
-  let agile;
-  if(isNat){setProgress(10,'Fetching all 14 regions…');agile=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/t*50),`Regions ${_d}/${t}…`));}
-  else agile=await fetchAgileRange(region,fromISO,toISO);
-  const[carbon,wsData]=await Promise.all([fetchCarbonDate(dateStr),fetchWholesale(fromISO,toISO)]);
-  if(!agile.length)throw new Error(`No Agile data for ${dateStr}.`);
-  const cm={};carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
-  const wsMap=buildWholesaleMap(wsData);
-  const labels=[],pd=[],wsd=[],cd=[];
-  agile.forEach(d=>{
-    labels.push(formatTime(d.valid_from));pd.push(parseFloat(d.value_inc_vat.toFixed(2)));
-    const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);
-    cd.push(cm[t.toISOString()]??null);wsd.push(wsMap[t.toISOString()]??null);
-  });
-  const friendly=new Date(dateStr+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const carbonAvg=carbon.length?carbon.reduce((s,d)=>s+(d.intensity?.actual??d.intensity?.forecast??0),0)/carbon.length:null;
-  document.getElementById('chart-main-title').textContent='Electricity Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`${friendly}${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-agile').textContent=`30-min slots — ${friendly}`;
-  document.getElementById('scatter-subtitle-ws').textContent=`30-min slots — ${friendly} (wholesale)`;
-  document.getElementById('cheap-title').textContent=`Cheapest Agile slots — ${dateStr}`;
-  document.getElementById('pricey-title').textContent=`Priciest Agile slots — ${dateStr}`;
-  setStatLabels(true);fillStats(agile,wsData,carbonAvg!==null?{actual:Math.round(carbonAvg)}:null);
-  buildScatterAgile(agile,carbon);buildScatterWs(wsData,carbon);
-  buildMainChart(labels,pd,wsd,cd,false);
-  buildSlotTables(agile);
-  buildRegionalTable(fromISO,toISO,carbon,wsData).catch(()=>{});
-}
-
-// ── LAST 12 MONTHS ────────────────────────────────────────────────────────────
-async function loadYear(region,isNat){
-  setProgress(5,isNat?'Fetching 12 months across all regions…':'Fetching 12 months…');
-  setLoader(true,isNat?'Fetching national data — ~30s…':'Fetching 12 months — please wait…');
-  const fromDate=dateNDaysAgo(365),toDate=dateNDaysAgo(-1);
-  const fromISO=`${fromDate}T00:00Z`,toISO=`${toDate}T00:00Z`;
-  let agileRaw;
-  if(isNat)agileRaw=await fetchAgileNational(fromISO,toISO,(_d,t)=>setProgress(5+Math.round(_d/t*35),`Regions ${_d}/${t}…`));
-  else{setProgress(10,'Fetching Agile price history…');agileRaw=await fetchAgileRange(region,fromISO,toISO,(_d,t)=>setProgress(10+Math.round(_d/Math.max(t,1)*35),`Prices ${_d}/${t}`));}
-  setProgress(45,'Fetching carbon intensity…');
-  const carbonRaw=[];
-  const chunks=Math.ceil(365/14);
-  for(let i=0;i<chunks;i++){
-    const cf=dateNDaysAgo(365-i*14),ct=dateNDaysAgo(Math.max(365-(i+1)*14,-1));
-    try{const ch=await fetchCarbonRange(`${cf}T00:00Z`,`${ct}T00:00Z`);carbonRaw.push(...ch);}catch(e){}
-    setProgress(45+Math.round(((i+1)/chunks)*25),`Carbon ${i+1}/${chunks}`);
-  }
-  setProgress(72,'Loading wholesale prices from cache…');
-  // wholesale.json is pre-fetched by GitHub Actions — one fast local read
-  const wsRaw=await fetchWholesale(fromISO,toISO);
-  console.log('Year view wholesale slots:',wsRaw.length);
-  setProgress(90,'Building charts…');
-  const aByW=aggregateByWeek(agileRaw),cByW=carbonByWeek(carbonRaw),wsByW=aggregateWsByWeek(wsRaw);
-  const labels=aByW.map(d=>new Date(d.date+'T12:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',timeZone:'Europe/London'}));
-  const pd=aByW.map(d=>parseFloat(d.avg.toFixed(2)));
-  const wsd=aByW.map(d=>{const v=wsByW[d.date];return v!==undefined?parseFloat(v.toFixed(2)):null;});
-  const cd=aByW.map(d=>{const v=cByW[d.date];return v!==undefined?parseFloat(v.toFixed(0)):null;});
-  const cAvg=Object.values(cByW).length?Object.values(cByW).reduce((a,b)=>a+b,0)/Object.values(cByW).length:null;
-  document.getElementById('chart-main-title').textContent='Weekly Average Price & Carbon Intensity';
-  document.getElementById('chart-main-subtitle').textContent=`Last 12 months — weekly averages${isNat?' (national avg)':''}`;
-  document.getElementById('scatter-subtitle-agile').textContent=`Sampled — ${agileRaw.length.toLocaleString()} slots${isNat?', national avg':''}`;
-  document.getElementById('scatter-subtitle-ws').textContent=`Sampled — ${wsRaw.length.toLocaleString()} wholesale slots`;
-  setStatLabels(false);fillStats(agileRaw,wsRaw,cAvg);
-  buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsRaw,carbonRaw);
-  buildMainChart(labels,pd,wsd,cd,true);
-  buildAggSlotTables(aByW,'week');
-  buildRegionalTable(fromISO,toISO,carbonRaw,wsRaw).catch(()=>{});
-  setProgress(100);
-}
-
-const _picker=document.getElementById('day-picker');
-_picker.max=dateNDaysAgo(1);_picker.min=dateNDaysAgo(365);
-loadData();
-setInterval(()=>{const p=document.getElementById('period-select').value;if(p==='today'||p==='month')loadData();},30*60*1000);
-</script>
-</body>
-</html>
+      - name: Commit wholesale.json if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add wholesale.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: update wholesale prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git push
+          fi
