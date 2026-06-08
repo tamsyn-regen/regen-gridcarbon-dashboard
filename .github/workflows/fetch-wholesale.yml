@@ -28,7 +28,19 @@ jobs:
             "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=${FROM}&to=${TO}&format=json")
           
           echo "HTTP status: $HTTP_STATUS"
-          cat raw_wholesale.json
+
+          python3 - << 'PYEOF'
+          import json
+          
+          with open('raw_wholesale.json') as f:
+              d = json.load(f)
+          
+          print("Keys:")
+          print(d.keys())
+          
+          print("Sample:")
+          print(d.get('data',[{}])[0])
+          PYEOF
 
           if [ "$HTTP_STATUS" != "200" ]; then
             echo "API returned $HTTP_STATUS — aborting"
