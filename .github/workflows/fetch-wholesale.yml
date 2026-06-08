@@ -17,7 +17,9 @@ jobs:
 
       - name: Fetch Elexon wholesale data in 7-day chunks
         run: |
-          curl -v "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=2026-06-01T00:00Z&to=2026-06-07T00:00Z&format=json" 2>&1 | head -80
+          echo "=== DEBUG: testing API directly ==="
+          curl -s "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index?from=2026-06-01T00:00Z&to=2026-06-07T00:00Z&format=json" | python3 -c "import sys,json; d=json.load(sys.stdin); print('keys:',list(d.keys())); print('data len:',len(d.get('data',d.get('items',d.get('results',[]))))); print('sample:',str(d)[:500])"
+          echo "=== END DEBUG ==="
           python3 - << 'PYEOF2'
           import json, time
           from datetime import datetime, timedelta, timezone
