@@ -18,17 +18,20 @@ jobs:
       - name: Fetch Elexon wholesale data in 7-day chunks
         run: |
           python3 - << 'PYEOF2'
-          import json, time, sys
+          import json, time
           from datetime import datetime, timedelta, timezone
           from collections import defaultdict
           import urllib.request as urllib2
 
-          def fetch_chunk(from_date, to_date):
+          def fetch_chunk(from_dt, to_dt):
+              # Format exactly as the API expects: 2022-06-01T00:00Z
+              from_str = from_dt.strftime("%Y-%m-%dT%H:%MZ")
+              to_str   = to_dt.strftime("%Y-%m-%dT%H:%MZ")
               url = (
                   "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index"
-                  f"?from={from_date}&to={to_date}&format=json"
+                  f"?from={from_str}&to={to_str}&format=json"
               )
-              print(f"  Fetching {from_date} -> {to_date} ...", flush=True)
+              print(f"  Fetching {from_str} -> {to_str} ...", flush=True)
               try:
                   req = urllib2.Request(url, headers={"Accept": "application/json"})
                   with urllib2.urlopen(req, timeout=30) as resp:
@@ -43,18 +46,16 @@ jobs:
                   print(f"  Error: {e} - skipping chunk")
                   return []
 
-          today = datetime.now(timezone.utc).date()
+          now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
           all_records = []
           chunk_days = 7
           total_days = 365
-          chunks = total_days // chunk_days
+          chunks = total_days // chunk_days  # 52 chunks
 
           for i in range(chunks):
-              days_back_end   = i * chunk_days
-              days_back_start = (i + 1) * chunk_days
-              to_date   = (today - timedelta(days=days_back_end)).isoformat()
-              from_date = (today - timedelta(days=days_back_start)).isoformat()
-              records = fetch_chunk(from_date, to_date)
+              to_dt   = now - timedelta(days=i * chunk_days)
+              from_dt = now - timedelta(days=(i + 1) * chunk_days)
+              records = fetch_chunk(from_dt, to_dt)
               all_records.extend(records)
               time.sleep(0.3)
 
@@ -103,5 +104,5 @@ jobs:
           else
             git commit -m "chore: update wholesale prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
             git pull --rebase origin main
-            git push origin main
+            git push origin main || (git pull --rebase origin main && git push origin main)
           fi
