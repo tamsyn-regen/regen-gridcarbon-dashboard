@@ -476,26 +476,46 @@ function computeTimeframeCorr(agile,carbonRaw,wsData){
   return{r:sA?sA.r:null,r2:sA?sA.r2:null,rWs:sW?sW.r:null,r2Ws:sW?sW.r2:null};
 }
 
-async function buildTimeframeTable(allAgile,allCarbon,allWs){
-  // Show loading spinner, hide both table containers
+async function buildTimeframeTable(){
+  // Runs once on page load. Always uses 12 months of data regardless of the period dropdown.
   document.getElementById('timeframe-table-loading').classList.remove('hidden');
   document.getElementById('timeframe-combined').classList.add('hidden');
   document.getElementById('timeframe-split').classList.add('hidden');
-  const now=new Date();
-  const cutoffs={
-    '1 day':   new Date(now.getTime()-1*24*60*60*1000),
-    '1 week':  new Date(now.getTime()-7*24*60*60*1000),
-    '1 month': new Date(now.getTime()-30*24*60*60*1000),
-    'Past year':new Date(now.getTime()-365*24*60*60*1000),
-  };
-  const rows=Object.entries(cutoffs).map(([label,cutoff])=>{
-    const agileSlice=allAgile.filter(d=>new Date(d.valid_from)>=cutoff);
-    const carbonSlice=allCarbon.filter(d=>new Date(d.from)>=cutoff);
-    const wsSlice=allWs.filter(d=>new Date(d.startTime)>=cutoff);
-    const corr=computeTimeframeCorr(agileSlice,carbonSlice,wsSlice);
-    return{label,...corr};
-  });
-  renderTimeframeTable(rows);
+  try{
+    // Fetch 12 months of data independently
+    const fromDate=dateNDaysAgo(365),toDate=dateNDaysAgo(-1);
+    const fromISO=`${fromDate}T00:00Z`,toISO=`${toDate}T00:00Z`;
+    // Agile: national average across all regions
+    const allAgile=await fetchAgileNational(fromISO,toISO);
+    // Carbon: chunked across the year
+    const carbonChunks=[];
+    const chunks=Math.ceil(365/14);
+    for(let i=0;i<chunks;i++){
+      const cf=dateNDaysAgo(365-i*14),ct=dateNDaysAgo(Math.max(365-(i+1)*14,-1));
+      try{const ch=await fetchCarbonRange(`${cf}T00:00Z`,`${ct}T00:00Z`);carbonChunks.push(...ch);}catch(e){}
+    }
+    // Wholesale: from cache
+    const allWs=await fetchWholesale(fromISO,toISO);
+    // Compute correlations for each time window by filtering from the full 12-month dataset
+    const now=new Date();
+    const cutoffs={
+      '1 day':   new Date(now.getTime()-1*24*60*60*1000),
+      '1 week':  new Date(now.getTime()-7*24*60*60*1000),
+      '1 month': new Date(now.getTime()-30*24*60*60*1000),
+      'Past year':new Date(now.getTime()-365*24*60*60*1000),
+    };
+    const rows=Object.entries(cutoffs).map(([label,cutoff])=>{
+      const agileSlice=allAgile.filter(d=>new Date(d.valid_from)>=cutoff);
+      const carbonSlice=carbonChunks.filter(d=>new Date(d.from)>=cutoff);
+      const wsSlice=allWs.filter(d=>new Date(d.startTime)>=cutoff);
+      const corr=computeTimeframeCorr(agileSlice,carbonSlice,wsSlice);
+      return{label,...corr};
+    });
+    renderTimeframeTable(rows);
+  }catch(e){
+    console.error('Timeframe table error:',e);
+    document.getElementById('timeframe-table-loading').classList.add('hidden');
+  }
 }
 
 // ── API FETCHERS ──────────────────────────────────────────────────────────────
@@ -766,7 +786,6 @@ async function loadToday(){
   buildScatterAgile(used,carbon);buildScatterWs(wsData,carbon);
   buildMainChart(labels,pd,wsd,cd,false);
   buildSlotTables(used);
-  buildTimeframeTable(used,carbon,wsData).catch(()=>{});
 }
 
 // ── LAST 30 DAYS ──────────────────────────────────────────────────────────────
@@ -799,7 +818,6 @@ async function loadMonth(){
   buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsData,carbonRaw);
   buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByD,'day');
-  buildTimeframeTable(agileRaw,carbonRaw,wsData).catch(()=>{});
   setProgress(100);
 }
 
@@ -834,7 +852,6 @@ async function loadSpecificDay(dateStr){
   buildScatterAgile(agile,carbon);buildScatterWs(wsData,carbon);
   buildMainChart(labels,pd,wsd,cd,false);
   buildSlotTables(agile);
-  buildTimeframeTable(agile,carbon,wsData).catch(()=>{});
 }
 
 // ── LAST 12 MONTHS ────────────────────────────────────────────────────────────
@@ -874,7 +891,6 @@ async function loadYear(){
   buildScatterAgile(agileRaw,carbonRaw);buildScatterWs(wsRaw,carbonRaw);
   buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByW,'week');
-  buildTimeframeTable(agileRaw,carbonRaw,wsRaw).catch(()=>{});
   setProgress(100);
 }
 
@@ -884,6 +900,7 @@ _picker.max=dateNDaysAgo(1);_picker.min=dateNDaysAgo(365);
 const _isMobile=window.innerWidth<=700;
 document.getElementById('period-select').value=_isMobile?'month':'year';
 loadData();
+buildTimeframeTable().catch(e=>console.error('Timeframe table failed:',e));
 setInterval(()=>{const p=document.getElementById('period-select').value;if(p==='today'||p==='month')loadData();},30*60*1000);
 </script>
 </body>
