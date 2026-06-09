@@ -142,6 +142,13 @@
     .timeframe-mobile{display:none!important;}
   }
   @media(max-width:600px){.insight-grid{grid-template-columns:1fr;}header{grid-template-columns:1fr;}.header-meta{text-align:left;}.control-divider{display:none;}.scatter-grid{grid-template-columns:1fr;}}
+  /* EXPORT BUTTONS */
+  .export-btn{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+  .export-btn:hover{border-color:var(--lime);color:var(--ink);background:rgba(184,224,74,.08);}
+  .export-btn svg{width:11px;height:11px;flex-shrink:0;}
+  .export-row{display:flex;gap:8px;flex-wrap:wrap;padding:10px 8px 4px;border-top:1px dashed var(--border);margin-top:8px;}
+  .export-section{background:var(--paper);border:1px solid var(--border);padding:16px 20px;margin-bottom:28px;}
+  .export-section .es-title{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -195,7 +202,7 @@
     <div class="scatter-wrap">
       <div class="chart-header">
         <div>
-          <div class="chart-title">Agile Price vs. Carbon — scatter</div>
+          <div class="chart-title">Octopus Agile Price vs. Carbon — scatter</div>
           <div class="chart-subtitle" id="scatter-subtitle-agile">Each dot = one 30-min slot</div>
         </div>
         <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
@@ -204,9 +211,12 @@
         <span>cheap</span><div style="width:60px;height:7px;border-radius:3px;background:linear-gradient(to right,#FFE8DC,#FB5400)"></div><span>expensive</span>
       </div>
       <canvas id="scatter-chart-agile" height="260"></canvas>
+      <div class="export-row">
+        <button class="export-btn" onclick="exportScatterCSV('agile')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Export scatter data CSV</button>
+      </div>
     </div>
     <div class="corr-panel" id="corr-panel-agile">
-      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-agile">—</div><div class="c-desc">Agile price vs carbon</div></div>
+      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-agile">—</div><div class="c-desc">Octopus Agile price vs carbon</div></div>
       <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-agile">—</div><div class="c-desc">Variance explained</div></div>
       <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-agile">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
       <div class="corr-cell"><div class="c-label">Correlation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-agile">—</div><div class="c-desc" id="corr-interp-agile">—</div></div>
@@ -226,6 +236,9 @@
         <span>cheap</span><div style="width:60px;height:7px;border-radius:3px;background:linear-gradient(to right,#ede9fe,#7c3aed)"></div><span>expensive</span>
       </div>
       <canvas id="scatter-chart-ws" height="260"></canvas>
+      <div class="export-row">
+        <button class="export-btn" onclick="exportScatterCSV('wholesale')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Export scatter data CSV</button>
+      </div>
     </div>
     <div class="corr-panel wholesale-panel" id="corr-panel-ws">
       <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-ws">—</div><div class="c-desc">Wholesale price vs carbon</div></div>
@@ -247,7 +260,7 @@
   <!-- Desktop combined table -->
   <div class="region-table-panel timeframe-desktop hidden" id="timeframe-combined">
     <div class="rt-title">
-      <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
+      <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Octopus Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
     </div>
     <table class="rt-table" id="timeframe-table">
       <thead>
@@ -303,6 +316,9 @@
     </div>
   </div>
   <canvas id="main-chart" height="320"></canvas>
+  <div class="export-row">
+    <button class="export-btn" onclick="exportTimeSeriesCSV()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Export time series CSV</button>
+  </div>
 </div>
 
 <!-- ④ SLOT TABLES -->
@@ -314,6 +330,18 @@
   <div class="insight-panel">
     <div class="ip-title" id="pricey-title">Priciest slots</div>
     <div id="priciest-slots">—</div>
+  </div>
+</div>
+
+<!-- EXPORT SECTION -->
+<div class="export-section">
+  <div class="es-title">Export data</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="export-btn" onclick="exportTimeSeriesCSV()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Time series (current view)</button>
+    <button class="export-btn" onclick="exportScatterCSV('agile')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Agile scatter data</button>
+    <button class="export-btn" onclick="exportScatterCSV('wholesale')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Wholesale scatter data</button>
+    <button class="export-btn" onclick="exportTimeframeCSV()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Correlation table</button>
+    <button class="export-btn" onclick="exportFullElexon()" style="border-color:rgba(124,58,237,.4);color:var(--wholesale-color);"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Full Elexon dataset (12 months)</button>
   </div>
 </div>
 
@@ -437,6 +465,16 @@ function rCell(r,r2,useWs){
 }
 
 function renderTimeframeTable(rows){
+  // Store for CSV export
+  _exportTimeframe=rows.map(row=>({
+    period:row.label,
+    agile_pearson_r:row.r!==null?row.r.toFixed(4):'',
+    agile_r_squared:row.r2!==null?row.r2.toFixed(4):'',
+    agile_strength:row.r!==null?strengthLabel(row.r).text:'',
+    wholesale_pearson_r:row.rWs!==null?row.rWs.toFixed(4):'',
+    wholesale_r_squared:row.r2Ws!==null?row.r2Ws.toFixed(4):'',
+    wholesale_strength:row.rWs!==null?strengthLabel(row.rWs).text:''
+  }));
   // Combined desktop table
   document.getElementById('timeframe-table-body').innerHTML=rows.map(row=>`<tr>
     <td><strong>${row.label}</strong></td>
@@ -633,6 +671,7 @@ function buildScatterAgile(agile,carbon){
   carbon.forEach(d=>{const t=new Date(d.from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);cm[t.toISOString()]=d.intensity?.actual??d.intensity?.forecast??null;});
   const pts=[];
   agile.forEach(d=>{const t=new Date(d.valid_from);t.setSeconds(0,0);t.setMinutes(t.getMinutes()<30?0:30);const c=cm[t.toISOString()];if(c!=null)pts.push({x:c,y:parseFloat(d.value_inc_vat.toFixed(2))});});
+  _exportScatterAgile=pts.map(p=>({carbon_g_co2_per_kwh:p.x,agile_pence_per_kwh:p.y}));
   const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
   updateCorrPanel(stats,'agile','var(--carbon-color)');
   const trendDs=[];
@@ -642,7 +681,7 @@ function buildScatterAgile(agile,carbon){
   function agileColor(p){const t=Math.max(0,Math.min(1,(p-minP)/(maxP-minP||1)));return`rgba(${Math.round(255+(251-255)*t)},${Math.round(232+(84-232)*t)},${Math.round(220+(0-220)*t)},0.85)`;}
   const ctx=document.getElementById('scatter-chart-agile').getContext('2d');
   if(scatterAgile)scatterAgile.destroy();
-  scatterAgile=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'Agile vs Carbon',data:sample,backgroundColor:sample.map(p=>agileColor(p.y)),pointRadius:3,pointHoverRadius:5},...trendDs]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:10},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x}g CO₂  →  ${ctx.parsed.y}p`:` Trend: ${ctx.parsed.y.toFixed(1)}p`}}},scales:{x:{title:{display:true,text:'Carbon (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Agile (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}}}}});
+  scatterAgile=new Chart(ctx,{type:'scatter',data:{datasets:[{label:'Agile vs Carbon',data:sample,backgroundColor:sample.map(p=>agileColor(p.y)),pointRadius:3,pointHoverRadius:5},...trendDs]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:10},callbacks:{label:ctx=>ctx.datasetIndex===0?` ${ctx.parsed.x}g CO₂  →  ${ctx.parsed.y}p`:` Trend: ${ctx.parsed.y.toFixed(1)}p`}}},scales:{x:{title:{display:true,text:'Carbon (g CO₂/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}},y:{title:{display:true,text:'Octopus Agile (p/kWh)',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',callback:v=>v+'p'},grid:{color:'rgba(200,216,208,.3)'},border:{color:'#c8d8d0'}}}}});
   return stats;
 }
 
@@ -652,6 +691,7 @@ function buildScatterWs(wsData,carbon){
   const wsMap=buildWholesaleMap(wsData);
   const pts=[];
   Object.entries(wsMap).forEach(([k,price])=>{const c=cm[k];if(c!=null)pts.push({x:c,y:parseFloat(price.toFixed(2))});});
+  _exportScatterWs=pts.map(p=>({carbon_g_co2_per_kwh:p.x,wholesale_pence_per_kwh:p.y}));
   const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
   updateCorrPanel(stats,'ws','var(--wholesale-color)');
   const trendDs=[];
@@ -667,6 +707,13 @@ function buildScatterWs(wsData,carbon){
 
 // ── MAIN CHART ────────────────────────────────────────────────────────────────
 function buildMainChart(labels,priceData,wsData,carbonData,isAgg){
+  // Store for CSV export
+  _exportTimeSeries=labels.map((label,i)=>({
+    label,
+    agile_pence_per_kwh:priceData[i]??'',
+    wholesale_pence_per_kwh:wsData[i]??'',
+    carbon_g_co2_per_kwh:carbonData[i]??''
+  }));
   const ctx=document.getElementById('main-chart').getContext('2d');
   if(mainChart)mainChart.destroy();
   const agileColors=priceData.map(p=>!p&&p!==0?'transparent':p<0?'rgba(42,122,75,.85)':p<10?'rgba(184,224,74,.8)':p<20?'rgba(184,224,74,.5)':p<30?'rgba(13,43,53,.5)':'rgba(13,43,53,.8)');
@@ -695,7 +742,7 @@ function buildAggSlotTables(agg,label){
 
 // ── STATS STRIP ───────────────────────────────────────────────────────────────
 function setStatLabels(todayMode){
-  document.getElementById('sl-current').textContent=todayMode?'Current Agile Price':'Latest Agile Price';
+  document.getElementById('sl-current').textContent=todayMode?'Current Octopus Agile Price':'Latest Octopus Agile Price';
   document.getElementById('sl-avg').textContent=todayMode?"Today's Avg (Agile)":'Period Avg (Agile)';
   document.getElementById('sl-min').textContent='Period Min (Agile)';
   document.getElementById('sl-carbon').textContent=todayMode?'Carbon Now':'Avg Carbon';
@@ -892,6 +939,78 @@ async function loadYear(){
   buildMainChart(labels,pd,wsd,cd,true);
   buildAggSlotTables(aByW,'week');
   setProgress(100);
+}
+
+// ── EXPORT DATA STORES ───────────────────────────────────────────────────────
+// These are populated by the build functions so export always reflects current view
+let _exportTimeSeries=[];   // {label, agile_pence, wholesale_pence, carbon_g}
+let _exportScatterAgile=[];  // {carbon_g, agile_pence}
+let _exportScatterWs=[];     // {carbon_g, wholesale_pence}
+let _exportTimeframe=[];     // {period, agile_r, agile_r2, agile_strength, ws_r, ws_r2, ws_strength}
+let _exportElexonFull=[];    // raw wholesale cache
+
+// ── EXPORT HELPERS ────────────────────────────────────────────────────────────
+function downloadCSV(filename, rows, headers){
+  const esc=v=>{
+    if(v===null||v===undefined)return'';
+    const s=String(v);
+    return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`:s;
+  };
+  const csv=[headers.map(esc).join(','),...rows.map(r=>headers.map(h=>esc(r[h])).join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportTimeSeriesCSV(){
+  if(!_exportTimeSeries.length){alert('No time series data loaded yet.');return;}
+  const period=document.getElementById('period-select').value;
+  const subtitle=document.getElementById('chart-main-subtitle').textContent.replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  downloadCSV(
+    `regen-grid-timeseries-${subtitle}-${new Date().toISOString().slice(0,10)}.csv`,
+    _exportTimeSeries,
+    ['label','agile_pence_per_kwh','wholesale_pence_per_kwh','carbon_g_co2_per_kwh']
+  );
+}
+
+function exportScatterCSV(type){
+  const data=type==='agile'?_exportScatterAgile:_exportScatterWs;
+  if(!data.length){alert('No scatter data loaded yet.');return;}
+  const headers=type==='agile'
+    ?['carbon_g_co2_per_kwh','agile_pence_per_kwh']
+    :['carbon_g_co2_per_kwh','wholesale_pence_per_kwh'];
+  downloadCSV(
+    `regen-grid-scatter-${type}-${new Date().toISOString().slice(0,10)}.csv`,
+    data,
+    headers
+  );
+}
+
+function exportTimeframeCSV(){
+  if(!_exportTimeframe.length){alert('Correlation table not loaded yet.');return;}
+  downloadCSV(
+    `regen-grid-correlation-by-timeframe-${new Date().toISOString().slice(0,10)}.csv`,
+    _exportTimeframe,
+    ['period','agile_pearson_r','agile_r_squared','agile_strength','wholesale_pearson_r','wholesale_r_squared','wholesale_strength']
+  );
+}
+
+async function exportFullElexon(){
+  try{
+    const r=await fetch('./wholesale.json');
+    if(!r.ok){alert('wholesale.json not found. Run the GitHub Action first.');return;}
+    const j=await r.json();
+    const rows=(j.data||[]).map(d=>({startTime:d.startTime,price_pence_per_kwh:d.price_pence}));
+    if(!rows.length){alert('Wholesale file is empty.');return;}
+    downloadCSV(
+      `regen-elexon-wholesale-full-${new Date().toISOString().slice(0,10)}.csv`,
+      rows,
+      ['startTime','price_pence_per_kwh']
+    );
+  }catch(e){alert('Could not load wholesale data: '+e.message);}
 }
 
 const _picker=document.getElementById('day-picker');
