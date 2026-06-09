@@ -55,13 +55,15 @@
   /* SCATTER */
   .scatter-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:0;}
   @media(max-width:700px){.scatter-grid{grid-template-columns:1fr;}}
-  .scatter-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;border-bottom:none;}
-  .corr-panel{border:1px solid var(--border);border-top:3px solid var(--lime);margin-bottom:28px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;background:var(--border);}
+  /* Agile scatter gets green top border to match wholesale purple */
+  .scatter-wrap{background:var(--paper);border:1px solid var(--border);padding:24px 16px 12px;border-bottom:none;border-top:3px solid var(--lime);}
+  /* corr-panel: fills full width, no grey gaps — 4 equal columns */
+  .corr-panel{border:1px solid var(--border);border-top:3px solid var(--lime);margin-bottom:28px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--border);}
   .corr-panel.wholesale-panel{border-top-color:var(--wholesale-color);}
-  .corr-cell{background:var(--paper);padding:14px 18px;}
-  .corr-cell .c-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:5px;}
-  .corr-cell .c-value{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1;}
-  .corr-cell .c-desc{font-size:.62rem;color:var(--muted);margin-top:4px;line-height:1.4;}
+  .corr-cell{background:var(--paper);padding:16px 20px;}
+  .corr-cell .c-label{font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;}
+  .corr-cell .c-value{font-family:'Fraunces',serif;font-size:1.6rem;font-weight:700;letter-spacing:-.02em;line-height:1;}
+  .corr-cell .c-desc{font-size:.7rem;color:var(--muted);margin-top:5px;line-height:1.4;}
   .strength-pill{display:inline-block;font-size:.62rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;margin-top:4px;}
   .strength-pill.strong{background:rgba(42,122,75,.12);color:var(--carbon-color);}
   .strength-pill.moderate{background:rgba(184,224,74,.2);color:#5a7820;}
@@ -127,6 +129,16 @@
   .footer-text p{font-size:.78rem;color:rgba(255,255,255,.75);line-height:1.9;}
   .footer-text a{color:var(--lime);text-decoration:none;}
   .footer-text a:hover{text-decoration:underline;}
+  @media(max-width:700px){
+    .timeframe-desktop{display:none!important;}
+    .timeframe-mobile{display:block!important;}
+    /* On mobile collapse corr panel to 2 columns so it fits */
+    .corr-panel{grid-template-columns:repeat(2,1fr);}
+  }
+  @media(min-width:701px){
+    .timeframe-desktop{display:block!important;}
+    .timeframe-mobile{display:none!important;}
+  }
   @media(max-width:600px){.insight-grid{grid-template-columns:1fr;}header{grid-template-columns:1fr;}.header-meta{text-align:left;}.control-divider{display:none;}.scatter-grid{grid-template-columns:1fr;}}
 </style>
 </head>
@@ -152,7 +164,7 @@
   <select id="period-select" onchange="onPeriodChange()">
     <option value="today">Last 24 hours</option>
     <option value="month">Last 30 days</option>
-    <option value="year" selected>Last 12 months</option>
+    <option value="year">Last 12 months</option>
     <option value="day">Specific day</option>
   </select>
   <input type="date" id="day-picker" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:var(--paper);border:1px solid var(--border);color:var(--ink);padding:8px 12px;outline:none;cursor:pointer;" onchange="loadData()">
@@ -200,7 +212,7 @@
   </div>
   <!-- Wholesale scatter -->
   <div>
-    <div class="scatter-wrap" style="border-top-color:var(--wholesale-color);">
+    <div class="scatter-wrap" style="border-top-color:var(--wholesale-color);border-top-width:3px;">
       <div class="chart-header">
         <div>
           <div class="chart-title" style="color:var(--wholesale-color)">Wholesale Price vs. Carbon — scatter</div>
@@ -224,15 +236,18 @@
 
 <!-- ② TIMEFRAME CORRELATION TABLE -->
 <div class="section-label">Correlation by time period — GB</div>
+<!-- Desktop: single combined table. Mobile: two stacked tables -->
 <div class="regional-wrap" id="timeframe-wrap">
-  <div class="region-table-panel">
+  <!-- Loading spinner shown until data arrives -->
+  <div id="timeframe-table-loading" class="region-table-loading" style="background:var(--paper);border:1px solid var(--border);">
+    <div class="spin" style="margin:0 auto 10px;"></div>Computing correlations…
+  </div>
+  <!-- Desktop combined table -->
+  <div class="region-table-panel timeframe-desktop" id="timeframe-combined" style="display:none">
     <div class="rt-title">
       <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
     </div>
-    <div id="timeframe-table-loading" class="region-table-loading">
-      <div class="spin" style="margin:0 auto 10px;"></div>Computing correlations…
-    </div>
-    <table class="rt-table" id="timeframe-table" style="display:none">
+    <table class="rt-table" id="timeframe-table">
       <thead>
         <tr>
           <th>Time period</th>
@@ -247,6 +262,23 @@
       </thead>
       <tbody id="timeframe-table-body"></tbody>
     </table>
+  </div>
+  <!-- Mobile: two stacked tables -->
+  <div class="timeframe-mobile" id="timeframe-split" style="display:none">
+    <div class="region-table-panel" style="margin-bottom:12px">
+      <div class="rt-title"><span style="color:var(--ink)">Agile price — Pearson's r vs Carbon</span></div>
+      <table class="rt-table">
+        <thead><tr><th>Period</th><th>r</th><th>R²</th><th>Strength</th></tr></thead>
+        <tbody id="timeframe-agile-body"></tbody>
+      </table>
+    </div>
+    <div class="region-table-panel">
+      <div class="rt-title"><span style="color:var(--wholesale-color)">Wholesale price — Pearson's r vs Carbon</span></div>
+      <table class="rt-table">
+        <thead><tr><th>Period</th><th class="ws-col">r</th><th class="ws-col">R²</th><th class="ws-col">Strength</th></tr></thead>
+        <tbody id="timeframe-ws-body"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -403,15 +435,27 @@ function rCell(r,r2,useWs){
 }
 
 function renderTimeframeTable(rows){
-  const tbody=document.getElementById('timeframe-table-body');
-  tbody.innerHTML=rows.map(row=>`<tr>
+  // Combined desktop table
+  document.getElementById('timeframe-table-body').innerHTML=rows.map(row=>`<tr>
     <td><strong>${row.label}</strong></td>
     ${rCell(row.r,row.r2,false)}
     <td class="col-divider"></td>
     ${rCell(row.rWs,row.r2Ws,true)}
   </tr>`).join('');
-  document.getElementById('timeframe-table').style.display='table';
+  // Mobile agile-only table
+  document.getElementById('timeframe-agile-body').innerHTML=rows.map(row=>`<tr>
+    <td><strong>${row.label}</strong></td>
+    ${rCell(row.r,row.r2,false)}
+  </tr>`).join('');
+  // Mobile wholesale-only table
+  document.getElementById('timeframe-ws-body').innerHTML=rows.map(row=>`<tr>
+    <td><strong>${row.label}</strong></td>
+    ${rCell(row.rWs,row.r2Ws,true)}
+  </tr>`).join('');
+  // Hide loading, show correct view (CSS handles desktop/mobile visibility)
   document.getElementById('timeframe-table-loading').style.display='none';
+  document.getElementById('timeframe-combined').style.display='';
+  document.getElementById('timeframe-split').style.display='';
 }
 
 // Compute correlation for a given agile + carbon + ws window
@@ -832,6 +876,9 @@ async function loadYear(){
 
 const _picker=document.getElementById('day-picker');
 _picker.max=dateNDaysAgo(1);_picker.min=dateNDaysAgo(365);
+// Set default period based on device — mobile gets 30 days (faster), desktop gets 12 months
+const _isMobile=window.innerWidth<=700;
+document.getElementById('period-select').value=_isMobile?'month':'year';
 loadData();
 setInterval(()=>{const p=document.getElementById('period-select').value;if(p==='today'||p==='month')loadData();},30*60*1000);
 </script>
