@@ -241,7 +241,7 @@
 <!-- Desktop: single combined table. Mobile: two stacked tables -->
 <div class="regional-wrap" id="timeframe-wrap">
   <!-- Loading spinner shown until data arrives -->
-  <div id="timeframe-table-loading" class="region-table-loading" style="background:var(--paper);border:1px solid var(--border);">
+  <div id="timeframe-table-loading" class="region-table-loading hidden" style="background:var(--paper);border:1px solid var(--border);">
     <div class="spin" style="margin:0 auto 10px;"></div>Computing correlations…
   </div>
   <!-- Desktop combined table -->
@@ -477,8 +477,10 @@ function computeTimeframeCorr(agile,carbonRaw,wsData){
 }
 
 async function buildTimeframeTable(allAgile,allCarbon,allWs){
-  document.getElementById('timeframe-table-loading').style.display='block';
-  document.getElementById('timeframe-table').style.display='none';
+  // Show loading spinner, hide both table containers
+  document.getElementById('timeframe-table-loading').classList.remove('hidden');
+  document.getElementById('timeframe-combined').classList.add('hidden');
+  document.getElementById('timeframe-split').classList.add('hidden');
   const now=new Date();
   const cutoffs={
     '1 day':   new Date(now.getTime()-1*24*60*60*1000),
