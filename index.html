@@ -129,6 +129,8 @@
   .footer-text p{font-size:.78rem;color:rgba(255,255,255,.75);line-height:1.9;}
   .footer-text a{color:var(--lime);text-decoration:none;}
   .footer-text a:hover{text-decoration:underline;}
+  /* Utility: JS adds/removes .hidden to show/hide timeframe tables */
+  .hidden{display:none!important;}
   @media(max-width:700px){
     .timeframe-desktop{display:none!important;}
     .timeframe-mobile{display:block!important;}
@@ -243,7 +245,7 @@
     <div class="spin" style="margin:0 auto 10px;"></div>Computing correlations…
   </div>
   <!-- Desktop combined table -->
-  <div class="region-table-panel timeframe-desktop" id="timeframe-combined" style="display:none">
+  <div class="region-table-panel timeframe-desktop hidden" id="timeframe-combined">
     <div class="rt-title">
       <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
     </div>
@@ -264,7 +266,7 @@
     </table>
   </div>
   <!-- Mobile: two stacked tables -->
-  <div class="timeframe-mobile" id="timeframe-split" style="display:none">
+  <div class="timeframe-mobile hidden" id="timeframe-split">
     <div class="region-table-panel" style="margin-bottom:12px">
       <div class="rt-title"><span style="color:var(--ink)">Agile price — Pearson's r vs Carbon</span></div>
       <table class="rt-table">
@@ -452,10 +454,10 @@ function renderTimeframeTable(rows){
     <td><strong>${row.label}</strong></td>
     ${rCell(row.rWs,row.r2Ws,true)}
   </tr>`).join('');
-  // Hide loading, reveal both containers — CSS media query handles which one shows
-  document.getElementById('timeframe-table-loading').style.display='none';
-  document.getElementById('timeframe-combined').removeAttribute('style');
-  document.getElementById('timeframe-split').removeAttribute('style');
+  // Hide loading, reveal both containers — CSS media query controls which is visible
+  document.getElementById('timeframe-table-loading').classList.add('hidden');
+  document.getElementById('timeframe-combined').classList.remove('hidden');
+  document.getElementById('timeframe-split').classList.remove('hidden');
 }
 
 // Compute correlation for a given agile + carbon + ws window
