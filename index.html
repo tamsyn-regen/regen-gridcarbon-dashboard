@@ -452,10 +452,10 @@ function renderTimeframeTable(rows){
     <td><strong>${row.label}</strong></td>
     ${rCell(row.rWs,row.r2Ws,true)}
   </tr>`).join('');
-  // Hide loading, show correct view (CSS handles desktop/mobile visibility)
+  // Hide loading, reveal both containers — CSS media query handles which one shows
   document.getElementById('timeframe-table-loading').style.display='none';
-  document.getElementById('timeframe-combined').style.display='';
-  document.getElementById('timeframe-split').style.display='';
+  document.getElementById('timeframe-combined').removeAttribute('style');
+  document.getElementById('timeframe-split').removeAttribute('style');
 }
 
 // Compute correlation for a given agile + carbon + ws window
