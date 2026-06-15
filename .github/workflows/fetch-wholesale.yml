@@ -1,4 +1,4 @@
-name: Fetch Wholesale Prices
+name: Fetch Wholesale Prices (DAP - Day Ahead)
 
 on:
   schedule:
@@ -15,20 +15,37 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch Elexon wholesale data in 7-day chunks
+      - name: Debug DAP endpoint structure
+        run: |
+          echo "=== Testing DAP endpoint ==="
+          curl -s "https://data.elexon.co.uk/bmrs/api/v1/datasets/DAP?from=2026-06-01T00:00Z&to=2026-06-02T00:00Z&format=json" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print('TOP LEVEL KEYS:', list(d.keys()))
+          data = d.get('data', [])
+          print('RECORD COUNT:', len(data))
+          if data:
+              print('FIRST RECORD:', json.dumps(data[0], indent=2))
+              print('SECOND RECORD:', json.dumps(data[1], indent=2))
+          else:
+              print('NO DATA - full response:')
+              print(json.dumps(d, indent=2)[:1000])
+          "
+          echo "=== End DAP debug ==="
+
+      - name: Fetch DAP day-ahead prices in 7-day chunks
         run: |
           python3 - << 'PYEOF2'
-          import json, time
+          import json, time, sys
           from datetime import datetime, timedelta, timezone
           from collections import defaultdict
           import urllib.request as urllib2
 
           def fetch_chunk(from_dt, to_dt):
-              # Format exactly as the API expects: 2022-06-01T00:00Z
               from_str = from_dt.strftime("%Y-%m-%dT%H:%MZ")
               to_str   = to_dt.strftime("%Y-%m-%dT%H:%MZ")
               url = (
-                  "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index"
+                  "https://data.elexon.co.uk/bmrs/api/v1/datasets/DAP"
                   f"?from={from_str}&to={to_str}&format=json"
               )
               print(f"  Fetching {from_str} -> {to_str} ...", flush=True)
@@ -50,7 +67,7 @@ jobs:
           all_records = []
           chunk_days = 7
           total_days = 365
-          chunks = total_days // chunk_days  # 52 chunks
+          chunks = total_days // chunk_days
 
           for i in range(chunks):
               to_dt   = now - timedelta(days=i * chunk_days)
@@ -60,18 +77,29 @@ jobs:
               time.sleep(0.3)
 
           print(f"Total raw records: {len(all_records)}")
+          if not all_records:
+              print("No records — keeping existing wholesale.json")
+              sys.exit(0)
 
+          # Print a sample record so we can verify the field names
+          print("SAMPLE RECORD:", json.dumps(all_records[0], indent=2))
+
+          # Group by startTime, extract price field
+          # DAP field names — we try both 'price' and 'marketIndexPrice' in case
           by_slot = defaultdict(list)
           for row in all_records:
-              price = row.get("price")
-              start = row.get("startTime")
+              # Try the field names we know from the debug step
+              price = row.get("price") or row.get("marketIndexPrice") or row.get("dayAheadPrice")
+              start = row.get("startTime") or row.get("settlementDate")
               if price is not None and start is not None:
                   by_slot[start].append(float(price))
+
+          print(f"Unique slots after grouping: {len(by_slot)}")
 
           output = [
               {
                   "startTime": k,
-                  "price_pence": round(sum(v) / len(v) / 10, 4)
+                  "price_pence": round(sum(v) / len(v) / 10, 4)  # £/MWh -> p/kWh
               }
               for k, v in sorted(by_slot.items())
           ]
@@ -79,12 +107,13 @@ jobs:
           print(f"Processed slots: {len(output)}")
           if output:
               print(f"Date range: {output[0]['startTime']} -> {output[-1]['startTime']}")
+              print(f"Sample price: {output[0]['price_pence']} p/kWh")
 
           result = {
               "fetched_at": datetime.now(timezone.utc).isoformat(),
               "record_count": len(output),
               "unit": "p/kWh",
-              "source": "Elexon BMRS Market Index Price (avg across providers, converted from GBP/MWh)",
+              "source": "Elexon BMRS Day-Ahead Price (DAP) - converted from GBP/MWh",
               "data": output
           }
 
@@ -102,7 +131,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update wholesale prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git commit -m "chore: update day-ahead wholesale prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
             git pull --rebase origin main
             git push origin main || (git pull --rebase origin main && git push origin main)
           fi
