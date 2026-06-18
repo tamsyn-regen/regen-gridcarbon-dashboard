@@ -1,4 +1,4 @@
-name: Fetch Wholesale Prices
+name: Fetch Wholesale Prices (IMRP Day-Ahead)
 
 on:
   schedule:
@@ -15,76 +15,148 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch Elexon wholesale data in 7-day chunks
+      - name: Debug IMRP endpoint structure
+        run: |
+          echo "=== Testing IMRP CKAN endpoint ==="
+          curl -s "https://dp.lowcarboncontracts.uk/api/3/action/datastore_search?resource_id=d0e58993-d8b2-4ab5-90e0-518b1e7b2f1e&limit=3" | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          print('TOP LEVEL KEYS:', list(d.keys()))
+          print('SUCCESS:', d.get('success'))
+          result = d.get('result', {})
+          print('TOTAL RECORDS:', result.get('total'))
+          records = result.get('records', [])
+          print('RECORDS IN PAGE:', len(records))
+          if records:
+              print('FIRST RECORD:', json.dumps(records[0], indent=2))
+              print('FIELD NAMES:', list(records[0].keys()))
+          else:
+              print('NO RECORDS - full response:')
+              print(json.dumps(d, indent=2)[:1500])
+          "
+          echo "=== End IMRP debug ==="
+
+      - name: Fetch full IMRP dataset and process
         run: |
           python3 - << 'PYEOF2'
-          import json, time
+          import json, time, sys
           from datetime import datetime, timedelta, timezone
-          from collections import defaultdict
           import urllib.request as urllib2
+          import urllib.parse as urlparse
 
-          def fetch_chunk(from_dt, to_dt):
-              # Format exactly as the API expects: 2022-06-01T00:00Z
-              from_str = from_dt.strftime("%Y-%m-%dT%H:%MZ")
-              to_str   = to_dt.strftime("%Y-%m-%dT%H:%MZ")
-              url = (
-                  "https://data.elexon.co.uk/bmrs/api/v1/balancing/pricing/market-index"
-                  f"?from={from_str}&to={to_str}&format=json"
-              )
-              print(f"  Fetching {from_str} -> {to_str} ...", flush=True)
+          RESOURCE_ID = "d0e58993-d8b2-4ab5-90e0-518b1e7b2f1e"
+          BASE_URL = "https://dp.lowcarboncontracts.uk/api/3/action/datastore_search"
+          PAGE_SIZE = 1000
+
+          def fetch_page(offset):
+              params = {
+                  "resource_id": RESOURCE_ID,
+                  "limit": PAGE_SIZE,
+                  "offset": offset,
+              }
+              url = BASE_URL + "?" + urlparse.urlencode(params)
+              print(f"  Fetching offset={offset} ...", flush=True)
               try:
                   req = urllib2.Request(url, headers={"Accept": "application/json"})
                   with urllib2.urlopen(req, timeout=30) as resp:
                       if resp.status != 200:
-                          print(f"  HTTP {resp.status} - skipping")
-                          return []
+                          print(f"  HTTP {resp.status} - stopping")
+                          return None
                       data = json.loads(resp.read().decode())
-                      records = data.get("data", [])
-                      print(f"  Got {len(records)} records")
-                      return records
+                      if not data.get("success"):
+                          print("  API returned success:false - stopping")
+                          return None
+                      result = data.get("result", {})
+                      records = result.get("records", [])
+                      total = result.get("total", 0)
+                      print(f"  Got {len(records)} records (total available: {total})")
+                      return records, total
               except Exception as e:
-                  print(f"  Error: {e} - skipping chunk")
-                  return []
+                  print(f"  Error: {e}")
+                  return None
 
-          now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
           all_records = []
-          chunk_days = 7
-          total_days = 365
-          chunks = total_days // chunk_days  # 52 chunks
-
-          for i in range(chunks):
-              to_dt   = now - timedelta(days=i * chunk_days)
-              from_dt = now - timedelta(days=(i + 1) * chunk_days)
-              records = fetch_chunk(from_dt, to_dt)
+          offset = 0
+          total = None
+          while True:
+              page = fetch_page(offset)
+              if page is None:
+                  break
+              records, total = page
+              if not records:
+                  break
               all_records.extend(records)
-              time.sleep(0.3)
+              offset += PAGE_SIZE
+              if total is not None and offset >= total:
+                  break
+              # Safety cap: ~13 months of hourly data is ~9500 records
+              if offset > 20000:
+                  print("  Hit safety cap of 20000 records, stopping")
+                  break
+              time.sleep(0.2)
 
-          print(f"Total raw records: {len(all_records)}")
+          print(f"\nTotal raw records fetched: {len(all_records)}")
+          if not all_records:
+              print("No records — keeping existing wholesale.json")
+              sys.exit(0)
 
-          by_slot = defaultdict(list)
-          for row in all_records:
-              price = row.get("price")
-              start = row.get("startTime")
-              if price is not None and start is not None:
-                  by_slot[start].append(float(price))
+          print("SAMPLE RECORD:", json.dumps(all_records[0], indent=2))
+          print("FIELD NAMES:", list(all_records[0].keys()))
 
-          output = [
-              {
-                  "startTime": k,
-                  "price_pence": round(sum(v) / len(v) / 10, 4)
-              }
-              for k, v in sorted(by_slot.items())
-          ]
+          def pick_field(record, candidates):
+              for c in candidates:
+                  if c in record and record[c] is not None:
+                      return record[c]
+              # Fuzzy match fallback
+              norm = lambda s: "".join(ch.lower() for ch in s if ch.isalnum())
+              keys_norm = {norm(k): k for k in record.keys()}
+              for c in candidates:
+                  if norm(c) in keys_norm:
+                      return record[keys_norm[norm(c)]]
+              return None
 
-          print(f"Processed slots: {len(output)}")
+          DATE_CANDIDATES = ["IMRP Date", "imrp_date", "IMRPDate", "Imrp Date", "_date", "date"]
+          PERIOD_CANDIDATES = ["Settlement Period", "settlement_period", "SettlementPeriod"]
+          PRICE_CANDIDATES = ["IMRP Amount (£/MWh)", "imrp_amount", "IMRP Amount", "imrp_amount_gbp_mwh", "price"]
+
+          def to_start_time(date_val, period_val):
+              # date_val might be "2026-06-01" or "2026-06-01T00:00:00" or similar
+              date_str = str(date_val)[:10]
+              try:
+                  hour = max(0, min(23, int(float(period_val)) - 1))
+              except (ValueError, TypeError):
+                  hour = 0
+              return f"{date_str}T{hour:02d}:00:00Z"
+
+          output_map = {}
+          skipped = 0
+          for rec in all_records:
+              date_val = pick_field(rec, DATE_CANDIDATES)
+              period_val = pick_field(rec, PERIOD_CANDIDATES)
+              price_val = pick_field(rec, PRICE_CANDIDATES)
+              if date_val is None or period_val is None or price_val is None:
+                  skipped += 1
+                  continue
+              try:
+                  price_pence = round(float(price_val) / 10, 4)  # GBP/MWh -> p/kWh
+              except (ValueError, TypeError):
+                  skipped += 1
+                  continue
+              start_time = to_start_time(date_val, period_val)
+              output_map[start_time] = price_pence
+
+          print(f"Processed slots: {len(output_map)} (skipped: {skipped})")
+
+          output = [{"startTime": k, "price_pence": v} for k, v in sorted(output_map.items())]
           if output:
               print(f"Date range: {output[0]['startTime']} -> {output[-1]['startTime']}")
+              print(f"Sample price: {output[0]['price_pence']} p/kWh")
 
           result = {
               "fetched_at": datetime.now(timezone.utc).isoformat(),
               "record_count": len(output),
               "unit": "p/kWh",
-              "source": "Elexon BMRS Market Index Price (avg across providers, converted from GBP/MWh)",
+              "source": "LCCC IMRP actuals (GB Day-Ahead Hourly Price, EPEX SPOT + N2EX weighted average) - converted from GBP/MWh",
               "data": output
           }
 
@@ -102,7 +174,7 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: update wholesale prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+            git commit -m "chore: update IMRP day-ahead prices [$(date -u '+%Y-%m-%d %H:%M UTC')]"
             git pull --rebase origin main
             git push origin main || (git pull --rebase origin main && git push origin main)
           fi
