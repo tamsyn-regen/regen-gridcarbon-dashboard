@@ -15,28 +15,16 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Debug IMRP endpoint structure
+      - name: Sanity check IMRP endpoint
         run: |
-          echo "=== Testing IMRP CKAN endpoint ==="
-          curl -s "https://dp.lowcarboncontracts.uk/api/3/action/datastore_search?resource_id=d0e58993-d8b2-4ab5-90e0-518b1e7b2f1e&limit=3" | python3 -c "
+          curl -s "https://dp.lowcarboncontracts.uk/api/3/action/datastore_search?resource_id=d0e58993-d8b2-4ab5-90e0-518b1e7b2f1e&limit=1" | python3 -c "
           import json, sys
           d = json.load(sys.stdin)
-          print('TOP LEVEL KEYS:', list(d.keys()))
-          print('SUCCESS:', d.get('success'))
-          result = d.get('result', {})
-          print('TOTAL RECORDS:', result.get('total'))
-          records = result.get('records', [])
-          print('RECORDS IN PAGE:', len(records))
-          if records:
-              print('FIRST RECORD:', json.dumps(records[0], indent=2))
-              print('FIELD NAMES:', list(records[0].keys()))
-          else:
-              print('NO RECORDS - full response:')
-              print(json.dumps(d, indent=2)[:1500])
+          print('API reachable:', d.get('success'))
+          print('Total records in dataset:', d.get('result', {}).get('total'))
           "
-          echo "=== End IMRP debug ==="
 
-      - name: Fetch full IMRP dataset and process
+      - name: Fetch recent IMRP records and process
         run: |
           python3 - << 'PYEOF2'
           import json, time, sys
@@ -75,23 +63,33 @@ jobs:
                   print(f"  Error: {e}")
                   return None
 
+          # First, find the total record count
+          first_page = fetch_page(0)
+          if first_page is None:
+              print("Could not reach IMRP API — keeping existing wholesale.json")
+              sys.exit(0)
+          _, total = first_page
+
+          # Records are ordered oldest-first (since 2016). We only want the last
+          # ~395 days, which at hourly resolution is ~9480 records. Start the
+          # offset near the end of the dataset and page forwards to the end.
+          HOURS_NEEDED = 395 * 24
+          start_offset = max(0, total - HOURS_NEEDED - PAGE_SIZE)  # small buffer
+          print(f"Total records in dataset: {total}")
+          print(f"Starting fetch at offset {start_offset} to get the most recent ~{HOURS_NEEDED} hours")
+
           all_records = []
-          offset = 0
-          total = None
+          offset = start_offset
           while True:
               page = fetch_page(offset)
               if page is None:
                   break
-              records, total = page
+              records, _ = page
               if not records:
                   break
               all_records.extend(records)
               offset += PAGE_SIZE
-              if total is not None and offset >= total:
-                  break
-              # Safety cap: ~13 months of hourly data is ~9500 records
-              if offset > 20000:
-                  print("  Hit safety cap of 20000 records, stopping")
+              if offset >= total:
                   break
               time.sleep(0.2)
 
@@ -101,26 +99,10 @@ jobs:
               sys.exit(0)
 
           print("SAMPLE RECORD:", json.dumps(all_records[0], indent=2))
-          print("FIELD NAMES:", list(all_records[0].keys()))
-
-          def pick_field(record, candidates):
-              for c in candidates:
-                  if c in record and record[c] is not None:
-                      return record[c]
-              # Fuzzy match fallback
-              norm = lambda s: "".join(ch.lower() for ch in s if ch.isalnum())
-              keys_norm = {norm(k): k for k in record.keys()}
-              for c in candidates:
-                  if norm(c) in keys_norm:
-                      return record[keys_norm[norm(c)]]
-              return None
-
-          DATE_CANDIDATES = ["IMRP Date", "imrp_date", "IMRPDate", "Imrp Date", "_date", "date"]
-          PERIOD_CANDIDATES = ["Settlement Period", "settlement_period", "SettlementPeriod"]
-          PRICE_CANDIDATES = ["IMRP Amount (£/MWh)", "imrp_amount", "IMRP Amount", "imrp_amount_gbp_mwh", "price"]
+          print("LAST RECORD:", json.dumps(all_records[-1], indent=2))
 
           def to_start_time(date_val, period_val):
-              # date_val might be "2026-06-01" or "2026-06-01T00:00:00" or similar
+              # date_val like "2026-06-01 00:00:00.0000000"
               date_str = str(date_val)[:10]
               try:
                   hour = max(0, min(23, int(float(period_val)) - 1))
@@ -131,9 +113,9 @@ jobs:
           output_map = {}
           skipped = 0
           for rec in all_records:
-              date_val = pick_field(rec, DATE_CANDIDATES)
-              period_val = pick_field(rec, PERIOD_CANDIDATES)
-              price_val = pick_field(rec, PRICE_CANDIDATES)
+              date_val = rec.get("IMRP_Date")
+              period_val = rec.get("Settlement_Period")
+              price_val = rec.get("IMRP_Amount")
               if date_val is None or period_val is None or price_val is None:
                   skipped += 1
                   continue
