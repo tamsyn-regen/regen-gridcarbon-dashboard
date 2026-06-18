@@ -189,7 +189,7 @@
 <div class="stat-strip">
   <div class="stat-cell"><div class="s-label" id="sl-current">Current Agile Price</div><div class="s-value" id="stat-current-price" style="color:var(--price-color)">—</div><div class="s-unit">p / kWh inc. VAT</div><div class="s-timestamp" id="stat-current-timestamp"></div></div>
   <div class="stat-cell"><div class="s-label" id="sl-avg">Period Avg (Agile)</div><div class="s-value" id="stat-avg-price">—</div><div class="s-unit">p / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-ws">Wholesale Price</div><div class="s-value" id="stat-ws-price" style="color:var(--wholesale-color)">—</div><div class="s-unit">p / kWh (£/MWh ÷ 10)</div></div>
+  <div class="stat-cell"><div class="s-label" id="sl-ws">Day-Ahead Price</div><div class="s-value" id="stat-ws-price" style="color:var(--wholesale-color)">—</div><div class="s-unit">p / kWh (IMRP, £/MWh ÷ 10)</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-carbon">Carbon Intensity</div><div class="s-value" id="stat-carbon" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-carbon">g CO₂eq / kWh</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-min">Period Min (Agile)</div><div class="s-value" id="stat-min-price" style="color:var(--carbon-color)">—</div><div class="s-unit">p / kWh</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-neg">Negative Slots</div><div class="s-value" id="stat-neg-slots" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-neg">half-hour periods</div></div>
@@ -228,7 +228,7 @@
     <div class="scatter-wrap" style="border-top-color:var(--wholesale-color);border-top-width:3px;">
       <div class="chart-header">
         <div>
-          <div class="chart-title" style="color:var(--wholesale-color)">Wholesale Price vs. Carbon — scatter</div>
+          <div class="chart-title" style="color:var(--wholesale-color)">Day-Ahead Price vs. Carbon — scatter</div>
           <div class="chart-subtitle" id="scatter-subtitle-ws">Each dot = one 30-min slot</div>
         </div>
         <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
@@ -242,7 +242,7 @@
       </div>
     </div>
     <div class="corr-panel wholesale-panel" id="corr-panel-ws">
-      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-ws">—</div><div class="c-desc">Wholesale price vs carbon</div></div>
+      <div class="corr-cell"><div class="c-label">Pearson's r</div><div class="c-value" id="corr-r-ws">—</div><div class="c-desc">Day-ahead price vs carbon</div></div>
       <div class="corr-cell"><div class="c-label">R²</div><div class="c-value" id="corr-r2-ws">—</div><div class="c-desc">Variance explained</div></div>
       <div class="corr-cell"><div class="c-label">p-value</div><div class="c-value" id="corr-p-ws">—</div><div class="c-desc">p &lt; 0.05 = significant</div></div>
       <div class="corr-cell"><div class="c-label">Correlation</div><div class="c-value" style="font-size:.85rem;padding-top:4px" id="corr-strength-ws">—</div><div class="c-desc" id="corr-interp-ws">—</div></div>
@@ -261,7 +261,7 @@
   <!-- Desktop combined table -->
   <div class="region-table-panel timeframe-desktop hidden" id="timeframe-combined">
     <div class="rt-title">
-      <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Octopus Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Wholesale price</span></span>
+      <span>Pearson's r — GB &nbsp;|&nbsp; <span style="color:var(--ink)">Octopus Agile price</span> &nbsp;vs&nbsp; <span style="color:var(--wholesale-color)">Day-ahead price</span></span>
     </div>
     <table class="rt-table" id="timeframe-table">
       <thead>
@@ -289,7 +289,7 @@
       </table>
     </div>
     <div class="region-table-panel">
-      <div class="rt-title"><span style="color:var(--wholesale-color)">Wholesale price — Pearson's r vs Carbon</span></div>
+      <div class="rt-title"><span style="color:var(--wholesale-color)">Day-ahead price — Pearson's r vs Carbon</span></div>
       <table class="rt-table">
         <thead><tr><th>Period</th><th class="ws-col">r</th><th class="ws-col">R²</th><th class="ws-col">Strength</th></tr></thead>
         <tbody id="timeframe-ws-body"></tbody>
@@ -342,13 +342,13 @@
     <button class="export-btn" onclick="exportScatterCSV('agile')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Agile scatter data</button>
     <button class="export-btn" onclick="exportScatterCSV('wholesale')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Wholesale scatter data</button>
     <button class="export-btn" onclick="exportTimeframeCSV()"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Correlation table</button>
-    <button class="export-btn" onclick="exportFullElexon()" style="border-color:rgba(124,58,237,.4);color:var(--wholesale-color);"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Full Elexon dataset (12 months)</button>
+    <button class="export-btn" onclick="exportFullIMRP()" style="border-color:rgba(124,58,237,.4);color:var(--wholesale-color);"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" style="width:11px;height:11px"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Full IMRP day-ahead dataset (12 months)</button>
   </div>
 </div>
 
 <div class="api-footer">
   <div class="api-source"><div class="src-label">Agile retail price</div><div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/…/standard-unit-rates/ — half-hourly p/kWh inc. VAT</div></div>
-  <div class="api-source"><div class="src-label">Wholesale market price</div><div class="src-url"><span class="ws">GET</span> wholesale.json (in repo root) — pre-fetched every 30 min by GitHub Actions from Elexon BMRS Market Index Price. GB-wide, £/MWh averaged across providers, converted to p/kWh.</div></div>
+  <div class="api-source"><div class="src-label">Wholesale / day-ahead price</div><div class="src-url"><span class="ws">GET</span> dp.lowcarboncontracts.uk — IMRP (Intermittent Market Reference Price), the GB Day Ahead Hourly Price, weighted average across EPEX SPOT &amp; N2EX day-ahead auctions. Hourly, converted £/MWh → p/kWh. Open Government Licence.</div></div>
   <div class="api-source"><div class="src-label">Carbon intensity</div><div class="src-url"><span>GET</span> api.carbonintensity.org.uk — half-hourly g CO₂eq/kWh</div></div>
   <div class="api-source"><div class="src-label">Statistics</div><div class="src-url" style="color:var(--muted)">Pearson's r, R², OLS and p-value computed client-side from matched half-hourly slots.</div></div>
 </div>
@@ -585,25 +585,111 @@ async function fetchAgileNational(fromISO,toISO,onProgress){
 }
 
 // Elexon wholesale market index — returns p/kWh (converted from £/MWh ÷ 10)
-// Averages across all data providers per settlement period
-// Wholesale data pre-fetched server-side by GitHub Actions every 30 min
-// stored in wholesale.json in the repo root. No CORS issues.
-// File covers last 35 days; we filter to the requested range here.
+// Wholesale / day-ahead price source: LCCC Data Portal "IMRP actuals" dataset
+// IMRP = GB Day Ahead Hourly Price, weighted average across EPEX SPOT + N2EX day-ahead indices.
+// Hosted on a CKAN open-data portal — datastore_search is usually CORS-friendly,
+// so we try calling it directly from the browser first. If that fails (CORS or
+// network), we fall back to a pre-fetched wholesale.json cached file in the repo.
+const IMRP_RESOURCE_ID='d0e58993-d8b2-4ab5-90e0-518b1e7b2f1e';
+const IMRP_API=`https://dp.lowcarboncontracts.uk/api/3/action/datastore_search`;
+
 let _wholesaleCache=null,_wholesaleCacheTime=0;
+let _wholesaleSource=null; // 'imrp-direct' or 'cached-file', set on first successful fetch
+
+// Pull a field value from a CKAN record trying several possible key spellings
+function pickField(record,candidates){
+  for(const c of candidates){
+    if(record[c]!==undefined&&record[c]!==null)return record[c];
+  }
+  // Fall back to case-insensitive partial match (CKAN sometimes uses display labels as keys)
+  const keys=Object.keys(record);
+  for(const c of candidates){
+    const match=keys.find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'')===c.toLowerCase().replace(/[^a-z0-9]/g,''));
+    if(match)return record[match];
+  }
+  return null;
+}
+
+// Convert IMRP date + hourly settlement period (1-24) into an ISO startTime (UTC half-hour aligned)
+function imrpToStartTime(dateStr,period){
+  // dateStr like "2026-06-01" or full ISO; period is 1-24 (hour of day, GB local time)
+  const datePart=dateStr.slice(0,10);
+  const hour=Math.max(0,Math.min(23,Number(period)-1));
+  return `${datePart}T${String(hour).padStart(2,'0')}:00:00Z`;
+}
+
+async function fetchWholesaleIMRPDirect(fromISO,toISO){
+  // CKAN datastore_search supports SQL-like filtering via datastore_search_sql,
+  // but the simplest robust approach is to page through datastore_search and
+  // filter client-side by date, since the dataset is updated daily and not huge.
+  const from=new Date(fromISO),to=new Date(toISO);
+  let allRecords=[],offset=0;
+  const pageSize=1000;
+  while(true){
+    const url=`${IMRP_API}?resource_id=${IMRP_RESOURCE_ID}&limit=${pageSize}&offset=${offset}`;
+    const r=await fetch(url);
+    if(!r.ok)throw new Error(`IMRP API HTTP ${r.status}`);
+    const j=await r.json();
+    if(!j.success)throw new Error('IMRP API returned success:false');
+    const records=j.result?.records||[];
+    if(!records.length)break;
+    allRecords.push(...records);
+    offset+=pageSize;
+    // Stop once we've paged past the total, or hit a sane upper bound (1 year of hourly = ~8800 rows)
+    const total=j.result?.total??Infinity;
+    if(offset>=total||offset>20000)break;
+  }
+  console.log(`IMRP direct: fetched ${allRecords.length} raw records`);
+  if(allRecords.length&&!_wholesaleDebugLogged){
+    console.log('IMRP sample record:',allRecords[0]);
+    _wholesaleDebugLogged=true;
+  }
+  // Map to {startTime, price} and filter to the requested window
+  const mapped=allRecords.map(rec=>{
+    const dateVal=pickField(rec,['IMRP Date','imrp_date','IMRPDate','Imrp Date','market_price_date','date']);
+    const periodVal=pickField(rec,['Settlement Period','settlement_period','SettlementPeriod']);
+    const priceVal=pickField(rec,['IMRP Amount (£/MWh)','imrp_amount','IMRP Amount','imrp_amount_gbp_mwh','price']);
+    if(dateVal==null||periodVal==null||priceVal==null)return null;
+    return{startTime:imrpToStartTime(dateVal,periodVal),price:Number(priceVal)/10}; // £/MWh -> p/kWh
+  }).filter(Boolean);
+  return mapped.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
+}
+let _wholesaleDebugLogged=false;
+
 async function fetchWholesale(fromISO,toISO){
-  try{
-    const now=Date.now();
-    if(!_wholesaleCache||now-_wholesaleCacheTime>5*60*1000){
-      const r=await fetch('./wholesale.json?t='+Math.floor(now/60000));
-      if(!r.ok){console.warn('wholesale.json not found — run GitHub Action first');return[];}
-      const j=await r.json();
-      _wholesaleCache=(j.data||[]).map(d=>({startTime:d.startTime,price:d.price_pence}));
-      _wholesaleCacheTime=now;
-      console.log('Wholesale cache: '+_wholesaleCache.length+' slots, fetched '+j.fetched_at);
-    }
+  const now=Date.now();
+  if(_wholesaleCache&&now-_wholesaleCacheTime<5*60*1000){
     const from=new Date(fromISO),to=new Date(toISO);
     return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
-  }catch(e){console.warn('Wholesale fetch failed:',e);return[];}
+  }
+  // Try IMRP direct from browser first (only attempt once per session if it fails)
+  if(_wholesaleSource!=='cached-file'){
+    try{
+      // Fetch a wide 13-month window once, then filter client-side on every call (fast, no repeat network)
+      const wideFrom=dateNDaysAgo(395)+'T00:00Z';
+      const wideTo=dateNDaysAgo(-1)+'T00:00Z';
+      const data=await fetchWholesaleIMRPDirect(wideFrom,wideTo);
+      if(data.length){
+        _wholesaleCache=data;_wholesaleCacheTime=now;_wholesaleSource='imrp-direct';
+        console.log(`Wholesale source: IMRP direct (CORS OK) — ${data.length} hourly slots cached`);
+        const from=new Date(fromISO),to=new Date(toISO);
+        return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
+      }
+    }catch(e){
+      console.warn('IMRP direct fetch failed (likely CORS) — falling back to cached file:',e.message);
+    }
+  }
+  // Fallback: pre-fetched cached file (e.g. from a GitHub Action), if one exists
+  try{
+    const r=await fetch('./wholesale.json?t='+Math.floor(now/60000));
+    if(!r.ok){console.warn('No wholesale.json fallback available either.');return[];}
+    const j=await r.json();
+    _wholesaleCache=(j.data||[]).map(d=>({startTime:d.startTime,price:d.price_pence}));
+    _wholesaleCacheTime=now;_wholesaleSource='cached-file';
+    console.log('Wholesale source: cached file fallback — '+_wholesaleCache.length+' slots, fetched '+j.fetched_at);
+    const from=new Date(fromISO),to=new Date(toISO);
+    return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
+  }catch(e){console.warn('Wholesale fetch failed entirely:',e);return[];}
 }
 
 async function fetchCarbonDate(d){const r=await fetch(`https://api.carbonintensity.org.uk/intensity/date/${d}`);if(!r.ok)return[];const j=await r.json();return j.data||[];}
@@ -720,7 +806,7 @@ function buildMainChart(labels,priceData,wsData,carbonData,isAgg){
   const agileColors=priceData.map(p=>!p&&p!==0?'transparent':p<0?'rgba(42,122,75,.85)':p<10?'rgba(184,224,74,.8)':p<20?'rgba(184,224,74,.5)':p<30?'rgba(13,43,53,.5)':'rgba(13,43,53,.8)');
   mainChart=new Chart(ctx,{type:'bar',data:{labels,datasets:[
     {label:'Agile Price (p/kWh)',data:priceData,backgroundColor:agileColors,borderColor:agileColors,borderWidth:0,yAxisID:'yPrice',order:3,barPercentage:isAgg?.6:.8,categoryPercentage:.85},
-    {label:'Wholesale Price (p/kWh)',data:wsData,type:'line',borderColor:'rgba(124,58,237,.8)',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,yAxisID:'yPrice',order:2,spanGaps:true},
+    {label:'Day-Ahead Price (p/kWh)',data:wsData,type:'line',borderColor:'rgba(124,58,237,.8)',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,yAxisID:'yPrice',order:2,spanGaps:true},
     {label:'Carbon Intensity (g CO₂/kWh)',data:carbonData,type:'line',borderColor:'rgba(42,122,75,.9)',backgroundColor:'rgba(42,122,75,.05)',borderWidth:2,pointRadius:isAgg?2:0,pointHoverRadius:4,tension:.4,fill:true,yAxisID:'yCarbon',order:1,spanGaps:true}
   ]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#0d2b35',titleColor:'#b8e04a',bodyColor:'#fff',titleFont:{family:'IBM Plex Mono',size:10},bodyFont:{family:'IBM Plex Mono',size:11},padding:10,callbacks:{label:ctx=>{if(ctx.dataset.label.includes('Agile')&&ctx.parsed.y!=null)return` ${isAgg?'Avg ':''}Agile: ${ctx.parsed.y.toFixed(2)}p/kWh`;if(ctx.dataset.label.includes('Wholesale')&&ctx.parsed.y!=null)return` ${isAgg?'Avg ':''}Wholesale: ${ctx.parsed.y.toFixed(2)}p/kWh`;if(ctx.dataset.label.includes('Carbon')&&ctx.parsed.y!=null)return` Carbon: ${ctx.parsed.y.toFixed(0)} g CO₂/kWh`;return null;}}}},scales:{x:{ticks:{font:{family:'IBM Plex Mono',size:9},color:'#5e7a72',maxTicksLimit:14,maxRotation:0},grid:{display:false},border:{color:'#c8d8d0'}},yPrice:{position:'left',title:{display:true,text:'p/kWh',font:{family:'IBM Plex Mono',size:9},color:'#0d2b35'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#0d2b35',callback:v=>v.toFixed(0)+'p'},grid:{color:'rgba(200,216,208,.4)'},border:{color:'#c8d8d0'}},yCarbon:{position:'right',title:{display:true,text:'g CO₂/kWh',font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},ticks:{font:{family:'IBM Plex Mono',size:9},color:'#2a7a4b'},grid:{display:false},border:{color:'#c8d8d0'}}}}});
 }
@@ -748,7 +834,7 @@ function setStatLabels(todayMode){
   document.getElementById('sl-min').textContent='Period Min (Agile)';
   document.getElementById('sl-carbon').textContent=todayMode?'Carbon Now':'Avg Carbon';
   document.getElementById('su-carbon').textContent=todayMode?'g CO₂eq / kWh':'g CO₂eq / kWh (avg)';
-  document.getElementById('sl-ws').textContent=todayMode?'Current Wholesale (GB)':'Period Avg Wholesale (GB)';
+  document.getElementById('sl-ws').textContent=todayMode?'Current Day-Ahead (GB)':'Period Avg Day-Ahead (GB)';
 }
 function fillStats(agile,wsData,carbonVal){
   const now=new Date();
@@ -1030,19 +1116,20 @@ function exportTimeframeCSV(){
   );
 }
 
-async function exportFullElexon(){
+async function exportFullIMRP(){
   try{
-    const r=await fetch('./wholesale.json');
-    if(!r.ok){alert('wholesale.json not found. Run the GitHub Action first.');return;}
-    const j=await r.json();
-    const rows=(j.data||[]).map(d=>({startTime:d.startTime,price_pence_per_kwh:d.price_pence}));
-    if(!rows.length){alert('Wholesale file is empty.');return;}
+    // Use whatever is already cached (IMRP direct or file fallback) — force a wide fetch if empty
+    if(!_wholesaleCache||!_wholesaleCache.length){
+      await fetchWholesale(dateNDaysAgo(395)+'T00:00Z',dateNDaysAgo(-1)+'T00:00Z');
+    }
+    if(!_wholesaleCache||!_wholesaleCache.length){alert('No day-ahead price data available to export.');return;}
+    const rows=_wholesaleCache.map(d=>({startTime:d.startTime,price_pence_per_kwh:d.price}));
     downloadCSV(
-      `regen-elexon-wholesale-full-${new Date().toISOString().slice(0,10)}.csv`,
+      `regen-imrp-day-ahead-full-${new Date().toISOString().slice(0,10)}.csv`,
       rows,
       ['startTime','price_pence_per_kwh']
     );
-  }catch(e){alert('Could not load wholesale data: '+e.message);}
+  }catch(e){alert('Could not load day-ahead price data: '+e.message);}
 }
 
 const _picker=document.getElementById('day-picker');
