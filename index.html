@@ -584,77 +584,11 @@ async function fetchAgileNational(fromISO,toISO,onProgress){
   return Object.values(slotMap).filter(s=>s.prices.length>=10).map(s=>({valid_from:s.valid_from,valid_to:s.valid_to,value_inc_vat:s.prices.reduce((a,b)=>a+b,0)/s.prices.length})).sort((a,b)=>new Date(a.valid_from)-new Date(b.valid_from));
 }
 
-// Elexon wholesale market index — returns p/kWh (converted from £/MWh ÷ 10)
-// Wholesale / day-ahead price source: LCCC Data Portal "IMRP actuals" dataset
-// IMRP = GB Day Ahead Hourly Price, weighted average across EPEX SPOT + N2EX day-ahead indices.
-// Hosted on a CKAN open-data portal — datastore_search is usually CORS-friendly,
-// so we try calling it directly from the browser first. If that fails (CORS or
-// network), we fall back to a pre-fetched wholesale.json cached file in the repo.
-const IMRP_RESOURCE_ID='d0e58993-d8b2-4ab5-90e0-518b1e7b2f1e';
-const IMRP_API=`https://dp.lowcarboncontracts.uk/api/3/action/datastore_search`;
-
-let _wholesaleCache=null,_wholesaleCacheTime=0;
-let _wholesaleSource=null; // 'imrp-direct' or 'cached-file', set on first successful fetch
-
-// Pull a field value from a CKAN record trying several possible key spellings
-function pickField(record,candidates){
-  for(const c of candidates){
-    if(record[c]!==undefined&&record[c]!==null)return record[c];
-  }
-  // Fall back to case-insensitive partial match (CKAN sometimes uses display labels as keys)
-  const keys=Object.keys(record);
-  for(const c of candidates){
-    const match=keys.find(k=>k.toLowerCase().replace(/[^a-z0-9]/g,'')===c.toLowerCase().replace(/[^a-z0-9]/g,''));
-    if(match)return record[match];
-  }
-  return null;
-}
-
-// Convert IMRP date + hourly settlement period (1-24) into an ISO startTime (UTC half-hour aligned)
-function imrpToStartTime(dateStr,period){
-  // dateStr like "2026-06-01" or full ISO; period is 1-24 (hour of day, GB local time)
-  const datePart=dateStr.slice(0,10);
-  const hour=Math.max(0,Math.min(23,Number(period)-1));
-  return `${datePart}T${String(hour).padStart(2,'0')}:00:00Z`;
-}
-
-async function fetchWholesaleIMRPDirect(fromISO,toISO){
-  // CKAN datastore_search supports SQL-like filtering via datastore_search_sql,
-  // but the simplest robust approach is to page through datastore_search and
-  // filter client-side by date, since the dataset is updated daily and not huge.
-  const from=new Date(fromISO),to=new Date(toISO);
-  let allRecords=[],offset=0;
-  const pageSize=1000;
-  while(true){
-    const url=`${IMRP_API}?resource_id=${IMRP_RESOURCE_ID}&limit=${pageSize}&offset=${offset}`;
-    const r=await fetch(url);
-    if(!r.ok)throw new Error(`IMRP API HTTP ${r.status}`);
-    const j=await r.json();
-    if(!j.success)throw new Error('IMRP API returned success:false');
-    const records=j.result?.records||[];
-    if(!records.length)break;
-    allRecords.push(...records);
-    offset+=pageSize;
-    // Stop once we've paged past the total, or hit a sane upper bound (1 year of hourly = ~8800 rows)
-    const total=j.result?.total??Infinity;
-    if(offset>=total||offset>20000)break;
-  }
-  console.log(`IMRP direct: fetched ${allRecords.length} raw records`);
-  if(allRecords.length&&!_wholesaleDebugLogged){
-    console.log('IMRP sample record:',allRecords[0]);
-    _wholesaleDebugLogged=true;
-  }
-  // Map to {startTime, price} and filter to the requested window
-  const mapped=allRecords.map(rec=>{
-    const dateVal=pickField(rec,['IMRP Date','imrp_date','IMRPDate','Imrp Date','market_price_date','date']);
-    const periodVal=pickField(rec,['Settlement Period','settlement_period','SettlementPeriod']);
-    const priceVal=pickField(rec,['IMRP Amount (£/MWh)','imrp_amount','IMRP Amount','imrp_amount_gbp_mwh','price']);
-    if(dateVal==null||periodVal==null||priceVal==null)return null;
-    return{startTime:imrpToStartTime(dateVal,periodVal),price:Number(priceVal)/10}; // £/MWh -> p/kWh
-  }).filter(Boolean);
-  return mapped.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
-}
-let _wholesaleDebugLogged=false;
+// Wholesale / day-ahead price source: LCCC Data Portal "IMRP actuals" dataset.
+// IMRP = GB Day Ahead Hourly Price, weighted average across EPEX SPOT + N2EX
+// day-ahead auctions. Direct browser fetch is CORS-blocked (confirmed), so a
+// GitHub Action fetches it server-side every 6 hours into wholesale.json.
+let _wholesaleCache=null,_wholesaleCacheTime=0,_wholesaleSource=null;
 
 async function fetchWholesale(fromISO,toISO){
   const now=Date.now();
@@ -662,31 +596,15 @@ async function fetchWholesale(fromISO,toISO){
     const from=new Date(fromISO),to=new Date(toISO);
     return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
   }
-  // Try IMRP direct from browser first (only attempt once per session if it fails)
-  if(_wholesaleSource!=='cached-file'){
-    try{
-      // Fetch a wide 13-month window once, then filter client-side on every call (fast, no repeat network)
-      const wideFrom=dateNDaysAgo(395)+'T00:00Z';
-      const wideTo=dateNDaysAgo(-1)+'T00:00Z';
-      const data=await fetchWholesaleIMRPDirect(wideFrom,wideTo);
-      if(data.length){
-        _wholesaleCache=data;_wholesaleCacheTime=now;_wholesaleSource='imrp-direct';
-        console.log(`Wholesale source: IMRP direct (CORS OK) — ${data.length} hourly slots cached`);
-        const from=new Date(fromISO),to=new Date(toISO);
-        return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
-      }
-    }catch(e){
-      console.warn('IMRP direct fetch failed (likely CORS) — falling back to cached file:',e.message);
-    }
-  }
-  // Fallback: pre-fetched cached file (e.g. from a GitHub Action), if one exists
+  // NOTE: IMRP direct browser fetch is CORS-blocked (confirmed) — data is
+  // pre-fetched server-side by a GitHub Action into wholesale.json instead.
   try{
     const r=await fetch('./wholesale.json?t='+Math.floor(now/60000));
-    if(!r.ok){console.warn('No wholesale.json fallback available either.');return[];}
+    if(!r.ok){console.warn('wholesale.json not found — run the GitHub Action first.');return[];}
     const j=await r.json();
     _wholesaleCache=(j.data||[]).map(d=>({startTime:d.startTime,price:d.price_pence}));
     _wholesaleCacheTime=now;_wholesaleSource='cached-file';
-    console.log('Wholesale source: cached file fallback — '+_wholesaleCache.length+' slots, fetched '+j.fetched_at);
+    console.log('Wholesale source: cached file — '+_wholesaleCache.length+' slots, fetched '+j.fetched_at+' ('+(j.source||'unknown source')+')');
     const from=new Date(fromISO),to=new Date(toISO);
     return _wholesaleCache.filter(d=>{const t=new Date(d.startTime);return t>=from&&t<=to;});
   }catch(e){console.warn('Wholesale fetch failed entirely:',e);return[];}
