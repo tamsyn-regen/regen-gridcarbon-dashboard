@@ -165,7 +165,7 @@
 
 <div class="intro-block">
   <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
-  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale market index prices (Elexon BMRS) for comparison. Please be patient while data loads.</p>
+  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale day-ahead market prices for comparison. Please be patient while data loads.</p>
 </div>
 
 <div class="controls">
@@ -189,7 +189,7 @@
 <div class="stat-strip">
   <div class="stat-cell"><div class="s-label" id="sl-current">Current Agile Price</div><div class="s-value" id="stat-current-price" style="color:var(--price-color)">—</div><div class="s-unit">p / kWh inc. VAT</div><div class="s-timestamp" id="stat-current-timestamp"></div></div>
   <div class="stat-cell"><div class="s-label" id="sl-avg">Period Avg (Agile)</div><div class="s-value" id="stat-avg-price">—</div><div class="s-unit">p / kWh</div></div>
-  <div class="stat-cell"><div class="s-label" id="sl-ws">Day-Ahead Price</div><div class="s-value" id="stat-ws-price" style="color:var(--wholesale-color)">—</div><div class="s-unit">p / kWh (IMRP, £/MWh ÷ 10)</div></div>
+  <div class="stat-cell"><div class="s-label" id="sl-ws">Day-Ahead Price</div><div class="s-value" id="stat-ws-price" style="color:var(--wholesale-color)">—</div><div class="s-unit">p / kWh (IMRP, £/MWh ÷ 10)</div><div class="s-timestamp" id="stat-ws-note" style="color:var(--wholesale-color);opacity:.7;"></div></div>
   <div class="stat-cell"><div class="s-label" id="sl-carbon">Carbon Intensity</div><div class="s-value" id="stat-carbon" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-carbon">g CO₂eq / kWh</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-min">Period Min (Agile)</div><div class="s-value" id="stat-min-price" style="color:var(--carbon-color)">—</div><div class="s-unit">p / kWh</div></div>
   <div class="stat-cell"><div class="s-label" id="sl-neg">Negative Slots</div><div class="s-value" id="stat-neg-slots" style="color:var(--carbon-color)">—</div><div class="s-unit" id="su-neg">half-hour periods</div></div>
@@ -224,8 +224,8 @@
     </div>
   </div>
   <!-- Wholesale scatter -->
-  <div>
-    <div class="scatter-wrap" style="border-top-color:var(--wholesale-color);border-top-width:3px;">
+  <div id="wholesale-scatter-col">
+    <div class="scatter-wrap" id="wholesale-scatter-wrap" style="border-top-color:var(--wholesale-color);border-top-width:3px;">
       <div class="chart-header">
         <div>
           <div class="chart-title" style="color:var(--wholesale-color)">Day-Ahead Price vs. Carbon — scatter</div>
@@ -239,6 +239,13 @@
       <canvas id="scatter-chart-ws" height="260"></canvas>
       <div class="export-row">
         <button class="export-btn" onclick="exportScatterCSV('wholesale')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Export scatter data CSV</button>
+      </div>
+    </div>
+    <!-- Shown instead of the scatter when the selected window is too recent for IMRP data to exist yet -->
+    <div class="scatter-wrap hidden" id="wholesale-unavailable-notice" style="border-top-color:var(--wholesale-color);border-top-width:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;text-align:center;gap:10px;">
+      <div class="chart-title" style="color:var(--wholesale-color)">Day-Ahead Price vs. Carbon — scatter</div>
+      <div style="font-size:.78rem;color:var(--muted);line-height:1.6;max-width:340px;">
+        Day-ahead price data (IMRP) is published with a 1–2 day lag, so it isn't yet available for this time window. Try <strong>Last 7 days</strong> or a longer period to see the day-ahead comparison.
       </div>
     </div>
     <div class="corr-panel wholesale-panel" id="corr-panel-ws">
@@ -696,6 +703,21 @@ function buildScatterWs(wsData,carbon){
   const wsMap=buildWholesaleMap(wsData);
   const pts=[];
   Object.entries(wsMap).forEach(([k,price])=>{const c=cm[k];if(c!=null)pts.push({x:c,y:parseFloat(price.toFixed(2))});});
+  // IMRP day-ahead data lags 1-2 days behind real time, so very recent windows
+  // (last 24h, or a "specific day" within the last 2 days) often have no matched
+  // points yet. Show an explanatory notice instead of an empty/misleading scatter.
+  const wholesaleWrap=document.getElementById('wholesale-scatter-wrap');
+  const wholesaleNotice=document.getElementById('wholesale-unavailable-notice');
+  const wsNoteEl=document.getElementById('stat-ws-note');
+  if(pts.length<3){
+    wholesaleWrap.classList.add('hidden');
+    wholesaleNotice.classList.remove('hidden');
+    if(wsNoteEl)wsNoteEl.textContent='Not yet available (1–2 day lag)';
+  }else{
+    wholesaleWrap.classList.remove('hidden');
+    wholesaleNotice.classList.add('hidden');
+    if(wsNoteEl)wsNoteEl.textContent='';
+  }
   _exportScatterWs=pts.map(p=>({carbon_g_co2_per_kwh:p.x,wholesale_pence_per_kwh:p.y}));
   const stats=computeStats(pts.map(p=>p.x),pts.map(p=>p.y));
   updateCorrPanel(stats,'ws','var(--wholesale-color)');
