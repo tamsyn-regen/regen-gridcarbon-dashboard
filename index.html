@@ -142,6 +142,10 @@
     .timeframe-mobile{display:none!important;}
   }
   @media(max-width:600px){.insight-grid{grid-template-columns:1fr;}header{grid-template-columns:1fr;}.header-meta{text-align:left;}.control-divider{display:none;}.scatter-grid{grid-template-columns:1fr;}}
+  /* SCATTER SOURCE NOTES */
+  .scatter-source{font-size:.58rem;color:var(--muted);padding:8px 8px 6px;line-height:1.6;border-top:1px dashed var(--border);}
+  .scatter-source a{color:var(--muted);text-decoration:underline;}
+  .scatter-source a:hover{color:var(--ink);}
   /* EXPORT BUTTONS */
   .export-btn{font-family:'IBM Plex Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;background:none;border:1px solid var(--border);color:var(--muted);padding:4px 10px;cursor:pointer;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
   .export-btn:hover{border-color:var(--lime);color:var(--ink);background:rgba(184,224,74,.08);}
@@ -165,7 +169,7 @@
 
 <div class="intro-block">
   <h2>Are electricity prices really <em>cheaper</em> when the carbon intensity of the grid is lowest?</h2>
-  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale day-ahead market prices for comparison. Please be patient while data loads.</p>
+  <p>Regen have developed this dashboard to track the correlation between grid carbon intensity and electricity prices over time. Select a time period, or a specific day. Octopus Agile prices are shown alongside GB wholesale market index prices (Elexon BMRS) for comparison. Please be patient while data loads.</p>
 </div>
 
 <div class="controls">
@@ -203,7 +207,7 @@
     <div class="scatter-wrap">
       <div class="chart-header">
         <div>
-          <div class="chart-title">Octopus Agile Price vs. Carbon — scatter</div>
+          <div class="chart-title">Agile Tariff vs GB Carbon Intensity</div>
           <div class="chart-subtitle" id="scatter-subtitle-agile">Each dot = one 30-min slot</div>
         </div>
         <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
@@ -214,6 +218,10 @@
       <canvas id="scatter-chart-agile" height="260"></canvas>
       <div class="export-row">
         <button class="export-btn" onclick="exportScatterCSV('agile')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Export scatter data CSV</button>
+      </div>
+      <div class="scatter-source">
+        <strong>Price:</strong> Octopus Energy Agile Tariff — <a href="https://api.octopus.energy" target="_blank">api.octopus.energy</a> &nbsp;·&nbsp;
+        <strong>Carbon:</strong> National Grid ESO Carbon Intensity API — <a href="https://carbonintensity.org.uk" target="_blank">carbonintensity.org.uk</a>
       </div>
     </div>
     <div class="corr-panel" id="corr-panel-agile">
@@ -228,7 +236,7 @@
     <div class="scatter-wrap" id="wholesale-scatter-wrap" style="border-top-color:var(--wholesale-color);border-top-width:3px;">
       <div class="chart-header">
         <div>
-          <div class="chart-title" style="color:var(--wholesale-color)">Day-Ahead Price vs. Carbon — scatter</div>
+          <div class="chart-title" style="color:var(--wholesale-color)">Wholesale Reference Price (Day Ahead) vs GB Carbon Intensity</div>
           <div class="chart-subtitle" id="scatter-subtitle-ws">Each dot = one 30-min slot</div>
         </div>
         <div style="font-size:.85rem;color:var(--muted);letter-spacing:.03em;align-self:center;font-weight:600">↙ cheap &amp; clean &nbsp;|&nbsp; dirty ↗</div>
@@ -240,10 +248,14 @@
       <div class="export-row">
         <button class="export-btn" onclick="exportScatterCSV('wholesale')"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v7M3 5l3 3 3-3M1 10h10"/></svg>Export scatter data CSV</button>
       </div>
+      <div class="scatter-source">
+        <strong>Price:</strong> LCCC IMRP Actuals (GB Day Ahead Hourly Price, EPEX Spot &amp; Nord Pool weighted avg) — <a href="https://dp.lowcarboncontracts.uk/dataset/imrp-actuals" target="_blank">dp.lowcarboncontracts.uk</a> &nbsp;·&nbsp;
+        <strong>Carbon:</strong> National Grid ESO Carbon Intensity API — <a href="https://carbonintensity.org.uk" target="_blank">carbonintensity.org.uk</a>
+      </div>
     </div>
     <!-- Shown instead of the scatter when the selected window is too recent for IMRP data to exist yet -->
     <div class="scatter-wrap hidden" id="wholesale-unavailable-notice" style="border-top-color:var(--wholesale-color);border-top-width:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:260px;text-align:center;gap:10px;">
-      <div class="chart-title" style="color:var(--wholesale-color)">Day-Ahead Price vs. Carbon — scatter</div>
+      <div class="chart-title" style="color:var(--wholesale-color)">Wholesale Reference Price (Day Ahead) vs GB Carbon Intensity</div>
       <div style="font-size:.78rem;color:var(--muted);line-height:1.6;max-width:340px;">
         Day-ahead price data (IMRP) is published with a 1–2 day lag, so it isn't yet available for this time window. Try <strong>Last 7 days</strong> or a longer period to see the day-ahead comparison.
       </div>
@@ -354,10 +366,25 @@
 </div>
 
 <div class="api-footer">
-  <div class="api-source"><div class="src-label">Agile retail price</div><div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/electricity-tariffs/…/standard-unit-rates/ — half-hourly p/kWh inc. VAT</div></div>
-  <div class="api-source"><div class="src-label">Wholesale / day-ahead price</div><div class="src-url"><span class="ws">GET</span> dp.lowcarboncontracts.uk — IMRP (Intermittent Market Reference Price), the GB Day Ahead Hourly Price, weighted average across EPEX SPOT &amp; N2EX day-ahead auctions. Hourly, converted £/MWh → p/kWh. Open Government Licence.</div></div>
-  <div class="api-source"><div class="src-label">Carbon intensity</div><div class="src-url"><span>GET</span> api.carbonintensity.org.uk — half-hourly g CO₂eq/kWh</div></div>
-  <div class="api-source"><div class="src-label">Statistics</div><div class="src-url" style="color:var(--muted)">Pearson's r, R², OLS and p-value computed client-side from matched half-hourly slots.</div></div>
+  <div class="api-source">
+    <div class="src-label">Octopus Agile Tariff price</div>
+    <div class="src-url"><span>GET</span> api.octopus.energy/v1/products/AGILE-24-10-01/…/standard-unit-rates/</div>
+    <div class="src-url" style="color:var(--muted);margin-top:3px;">Half-hourly retail electricity prices (p/kWh inc. VAT) for 14 GB DNO regions. Averaged to GB national for this dashboard.</div>
+  </div>
+  <div class="api-source">
+    <div class="src-label">Wholesale Reference Price (Day Ahead)</div>
+    <div class="src-url"><span class="ws">CKAN</span> dp.lowcarboncontracts.uk/dataset/imrp-actuals</div>
+    <div class="src-url" style="color:var(--muted);margin-top:3px;">LCCC Intermittent Market Reference Price (IMRP) — GB Day Ahead Hourly Price, weighted average across EPEX Spot &amp; Nord Pool day-ahead auctions. Hourly, converted from £/MWh to p/kWh. UK Open Government Licence. Pre-fetched server-side every 6 hours via GitHub Actions.</div>
+  </div>
+  <div class="api-source">
+    <div class="src-label">GB Carbon Intensity</div>
+    <div class="src-url"><span>GET</span> api.carbonintensity.org.uk</div>
+    <div class="src-url" style="color:var(--muted);margin-top:3px;">National Grid ESO Carbon Intensity API — half-hourly g CO₂eq/kWh, GB national average.</div>
+  </div>
+  <div class="api-source">
+    <div class="src-label">Statistics</div>
+    <div class="src-url" style="color:var(--muted)">Pearson's r, R², OLS slope and p-value computed client-side from matched half-hourly slots. No data is sent to any server.</div>
+  </div>
 </div>
 
 </div><!-- /wrap -->
